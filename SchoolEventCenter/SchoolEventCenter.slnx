@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SchoolEventCenter.Module.Data/SchoolEventCenter.Module.Data.csproj" />
+  <Project Path="SchoolEventCenter/SchoolEventCenter.Api.csproj" />
+  <Project Path="ScoolEventCenter.Module.Identity/ScoolEventCenter.Module.Identity.csproj" />
+</Solution>
