@@ -1,11 +1,9 @@
 ﻿using SchoolEventCenter.Module.Data.Domain.Enums;
 
-namespace SchoolEventCenter.Module.Data.Domain.Entities;
+namespace SchoolEvemtCenter.Module.SchoolEventsManagement.Application.DTOs.OrganizerDTOs;
 
-public class SchoolEvent
+public class SchoolEventDetailDto
 {
-    public Guid Id { get; set; }
-
     public string Title { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
@@ -21,16 +19,4 @@ public class SchoolEvent
     public string? Url { get; set; }
 
     public EventStatus Status { get; set; }
-
-    public DateTime CreatedAt { get; set; }
-
-    // Organizer
-
-    public Guid OrganizerId { get; set; }
-
-    public User? Organizer { get; set; }
-
-    // Registrations
-
-    public ICollection<Registration> Registrations { get; set; } = [];
 }

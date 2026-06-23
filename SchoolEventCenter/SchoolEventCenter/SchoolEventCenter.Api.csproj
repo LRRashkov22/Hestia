@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SchoolEvemtCenter.Module.SchoolEventsManagement\SchoolEvemtCenter.Module.SchoolEventsManagement.csproj" />
     <ProjectReference Include="..\SchoolEventCenter.Module.Data\SchoolEventCenter.Module.Data.csproj" />
+    <ProjectReference Include="..\SchoolEventCenter.Module.Registration\SchoolEventCenter.Module.Registrations.csproj" />
     <ProjectReference Include="..\ScoolEventCenter.Module.Identity\ScoolEventCenter.Module.Identity.csproj" />
   </ItemGroup>
 

@@ -10,11 +10,9 @@ namespace SchoolEventCenter.Module.Data.Domain.Entities
 
         public User User { get; set; }
 
-
         public Guid SchoolEventId { get; set; }
 
         public SchoolEvent SchoolEvent { get; set; }
-
 
         public RegistrationStatus Status { get; set; }
 

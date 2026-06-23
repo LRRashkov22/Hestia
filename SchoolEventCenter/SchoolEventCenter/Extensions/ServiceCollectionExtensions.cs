@@ -1,9 +1,8 @@
-﻿using FluentValidation;
-using FluentValidation.AspNetCore;
+﻿using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using SchoolEvemtCenter.Module.SchoolEventsManagement;
 using SchoolEventCenter.Module.Data;
 using SchoolEventCenter.Module.Data.Options;
 using ScoolEventCenter.Module.Identity;
@@ -33,6 +32,7 @@ namespace SchoolEventCenter.Api.Extensions
         private static void ConfigureApplicationModules(this IServiceCollection services)
         {
             services.AddIdentityModule();
+            services.AddSchoolEventModule();
         }
 
         //------------------------------------------------------------------------------------

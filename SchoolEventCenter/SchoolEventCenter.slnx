@@ -1,5 +1,7 @@
 <Solution>
+  <Project Path="SchoolEvemtCenter.Module.SchoolEventsManagement/SchoolEvemtCenter.Module.SchoolEventsManagement.csproj" Id="f7075a29-461f-4233-b460-84638bd5d35e" />
   <Project Path="SchoolEventCenter.Module.Data/SchoolEventCenter.Module.Data.csproj" />
+  <Project Path="SchoolEventCenter.Module.Registration/SchoolEventCenter.Module.Registrations.csproj" Id="fad3d6d5-7d56-4556-bd13-9e4d4d674108" />
   <Project Path="SchoolEventCenter/SchoolEventCenter.Api.csproj" />
   <Project Path="ScoolEventCenter.Module.Identity/ScoolEventCenter.Module.Identity.csproj" />
 </Solution>
