@@ -1,6 +1,10 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
 import heroImg from './assets/hero.png'
 import './App.css'
+import { login } from './api/auth'
+import Register from './Register'
+import ForgotPassword from './ForgotPassword'
+import OrganizerDashboard from './OrganizerDashboard'
 
 type FormState = {
   email: string
@@ -41,9 +45,32 @@ function App() {
       setStatus('Please enter both your email and password.')
       return
     }
-
-    setStatus('Login details captured on the frontend.')
+    setStatus('Logging in...')
+    void (async () => {
+      try {
+        await login(form.email, form.password)
+        setStatus('Logged in')
+        const rawRole = localStorage.getItem('role') || ''
+        let role = rawRole.trim()
+        if (role.startsWith('[') && role.endsWith(']')) {
+          try { role = JSON.parse(role)[0] ?? role } catch { }
+        }
+        role = role.replace(/^"|"$/g, '')
+        if (role.toLowerCase() === 'organizer') {
+          window.location.href = '/events'
+          return
+        }
+      } catch (err: any) {
+        setStatus(err?.message || 'Login failed')
+      }
+    })()
   }
+
+  // simple client-side routing
+  const path = window.location.pathname
+  if (path === '/register') return <Register />
+  if (path === '/forgot-password') return <ForgotPassword />
+  if (path === '/events') return <OrganizerDashboard />
 
   return (
     <main className="login-shell">
