@@ -6,7 +6,12 @@ const PROD_BASE = `${normalizedBase}api/identity`
 // Use the configured API base URL directly (no dev proxy)
 const BASE = PROD_BASE
 
-type TokenResponse = { AccessToken: string; RefreshToken: string }
+type TokenResponse = {
+  accessToken?: string
+  refreshToken?: string
+  AccessToken?: string
+  RefreshToken?: string
+}
 
 export async function login(email: string, password: string) {
   const res = await fetch(`${BASE}/login`, {
@@ -19,11 +24,18 @@ export async function login(email: string, password: string) {
     throw new Error(text || 'Login failed')
   }
   const data = (await res.json()) as TokenResponse
-  localStorage.setItem('accessToken', data.AccessToken)
-  localStorage.setItem('refreshToken', data.RefreshToken)
+  const accessToken = data.accessToken ?? data.AccessToken
+  const refreshToken = data.refreshToken ?? data.RefreshToken
+
+  if (!accessToken || !refreshToken) {
+    throw new Error('Login response did not include tokens')
+  }
+
+  localStorage.setItem('accessToken', accessToken)
+  localStorage.setItem('refreshToken', refreshToken)
   // try to decode role from JWT and store it
   try {
-    let b = data.AccessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    let b = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
     while (b.length % 4) b += '='
     const payload = JSON.parse(decodeURIComponent(escape(atob(b))))
     let role: any = payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.roles || payload['roles']

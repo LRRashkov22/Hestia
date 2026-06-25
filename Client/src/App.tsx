@@ -4,7 +4,7 @@ import './App.css'
 import { login } from './api/auth'
 import Register from './Register'
 import ForgotPassword from './ForgotPassword'
-import OrganizerDashboard from './OrganizerDashboard'
+import SchoolDashboard from './SchoolDashboard'
 
 type FormState = {
   email: string
@@ -56,10 +56,7 @@ function App() {
           try { role = JSON.parse(role)[0] ?? role } catch { }
         }
         role = role.replace(/^"|"$/g, '')
-        if (role.toLowerCase() === 'organizer') {
-          window.location.href = '/events'
-          return
-        }
+        window.location.href = role.toLowerCase() === 'organizer' ? '/events' : '/dashboard'
       } catch (err: any) {
         setStatus(err?.message || 'Login failed')
       }
@@ -70,7 +67,7 @@ function App() {
   const path = window.location.pathname
   if (path === '/register') return <Register />
   if (path === '/forgot-password') return <ForgotPassword />
-  if (path === '/events') return <OrganizerDashboard />
+  if (path === '/events' || path === '/dashboard') return <SchoolDashboard />
 
   return (
     <main className="login-shell">
