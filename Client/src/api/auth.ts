@@ -2,10 +2,10 @@
 const BASE = '/api/identity'
 
 type TokenResponse = {
-  AccessToken?: string
-  RefreshToken?: string
   accessToken?: string
   refreshToken?: string
+  AccessToken?: string
+  RefreshToken?: string
 }
 
 export async function login(email: string, password: string) {

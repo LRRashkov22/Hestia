@@ -4,7 +4,7 @@ import './App.css'
 import { login } from './api/auth'
 import Register from './Register'
 import ForgotPassword from './ForgotPassword'
-import OrganizerDashboard from './OrganizerDashboard'
+import SchoolDashboard from './SchoolDashboard'
 
 type FormState = {
   email: string
@@ -91,6 +91,7 @@ function App() {
   if (path === '/register') return <Register />
   if (path === '/forgot-password') return <ForgotPassword />
   if (path === '/organizer/dashboard') return <OrganizerDashboard />
+>>>>>>> c27f0f0092e4de06f85d36c029a903445aa859b6
 
   return (
     <main className="login-shell">
