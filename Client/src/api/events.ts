@@ -1,15 +1,16 @@
-const rawBase = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7147/'
-const normalizedBase = rawBase.endsWith('/') ? rawBase : rawBase + '/'
-const BASE = `${normalizedBase}api/events`
+// Use Vite proxy like auth.ts does
+const BASE = '/api/events'
 
 function authHeader() {
   const token = localStorage.getItem('accessToken')
+  console.debug('events authHeader token', token ? 'present' : 'missing')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 async function handleRes(res: Response) {
   if (!res.ok) {
     const text = await res.text()
+    console.error('events request failed', res.status, text)
     throw new Error(text || 'Request failed')
   }
   if (res.status === 204) return null
@@ -46,11 +47,15 @@ export function cancelEvent(eventId: string) {
 
 // Organizer dashboard
 export function getOrganizerDashboardCards() {
-  return fetch(`${BASE}/organizer/dashboard/cards`, { headers: { 'Content-Type': 'application/json', ...authHeader() } }).then(handleRes)
+  const headers = { ...authHeader() }
+  console.debug('getOrganizerDashboardCards', BASE, headers)
+  return fetch(`${BASE}/organizer/dashboard/cards`, { headers }).then(handleRes)
 }
 
 export function getOrganizerDashboardEvents() {
-  return fetch(`${BASE}/organizer/dashboard/events`, { headers: { 'Content-Type': 'application/json', ...authHeader() } }).then(handleRes)
+  const headers = { ...authHeader() }
+  console.debug('getOrganizerDashboardEvents', BASE, headers)
+  return fetch(`${BASE}/organizer/dashboard/events`, { headers }).then(handleRes)
 }
 
 // Student endpoints

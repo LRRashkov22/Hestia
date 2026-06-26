@@ -18,10 +18,10 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
 
 
     //Create_School_Event-------------------------------------------------------------
-    public async Task<Result<SchoolEvent>> CreateSchoolEventAsync(SchoolEventDto request, Guid userId)
+    public async Task<Result<Guid>> CreateSchoolEventAsync(SchoolEventDto request, Guid userId)
     {
         var organizer = await context.Set<User>().FirstOrDefaultAsync(x => x.Id == userId && x.Role == UserRole.Organizer);
-        if (organizer is null) return Result<SchoolEvent>.Fail("User not found");
+        if (organizer is null) return Result<Guid>.Fail("User not found");
         var School_event = new SchoolEvent
         {
             Title = request.Title,
@@ -34,22 +34,21 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
             Status = request.Publish ? EventStatus.Published : EventStatus.Draft,
             CreatedAt = DateTime.UtcNow,
             OrganizerId = organizer.Id,
-            //Registrations = request.Registrations,
         };
         context.SchoolEvents.Add(School_event);
         await context.SaveChangesAsync();
-        return Result<SchoolEvent>.Ok(School_event);
+        return Result<Guid>.Ok(School_event.Id);
     }
     //Create_School_Event-------------------------------------------------------------
 
     //Update_School_Event-------------------------------------------------------------
-    public async Task<Result<SchoolEvent>> UpdateSchoolEventAsync(Guid eventId, SchoolEventDto request)
+    public async Task<Result<bool>> UpdateSchoolEventAsync(Guid eventId, SchoolEventDto request)
     {
         var schoolEvent = await context.SchoolEvents.FirstOrDefaultAsync(x => x.Id == eventId);
 
-        if (schoolEvent is null) return Result<SchoolEvent>.Fail("Event not found");
+        if (schoolEvent is null) return Result<bool>.Fail("Event not found");
 
-        if (schoolEvent.Status != EventStatus.Draft) return Result<SchoolEvent>.Fail("Only draft events can be edited");
+        if (schoolEvent.Status != EventStatus.Draft) return Result<bool>.Fail("Only draft events can be edited");
 
         schoolEvent.Title = request.Title;
         schoolEvent.Description = request.Description;
@@ -61,35 +60,35 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
         schoolEvent.Url = request.Url;
 
         await context.SaveChangesAsync();
-        return Result<SchoolEvent>.Ok(schoolEvent);
+        return Result<bool>.Ok(true);
     }
     //Update_School_Event-------------------------------------------------------------
 
     //Publish_School_Event-------------------------------------------------------------
-    public async Task<Result<SchoolEvent>> PublisSchoolEventAsync(Guid eventId)
+    public async Task<Result<bool>> PublisSchoolEventAsync(Guid eventId)
     {
         var schoolEvent = await context.Set<SchoolEvent>().FirstOrDefaultAsync(x => x.Id == eventId);
 
-        if (schoolEvent is null) return Result<SchoolEvent>.Fail("Event not found");
+        if (schoolEvent is null) return Result<bool>.Fail("Event not found");
 
-        if (schoolEvent.Status != EventStatus.Draft) return Result<SchoolEvent>.Fail("Only draft events can be published");
+        if (schoolEvent.Status != EventStatus.Draft) return Result<bool>.Fail("Only draft events can be published");
 
         schoolEvent.Status = EventStatus.Published;
         await context.SaveChangesAsync();
-        return Result<SchoolEvent>.Ok(schoolEvent);
+        return Result<bool>.Ok(true);
     }
     //Publish_School_Event-------------------------------------------------------------
 
     //Cancel_School_Event-------------------------------------------------------------
-    public async Task<Result<SchoolEvent>> CancelSchoolEventAsync(Guid eventId)
+    public async Task<Result<bool>> CancelSchoolEventAsync(Guid eventId)
     {
         var schoolEvent = await context.Set<SchoolEvent>().FirstOrDefaultAsync(x => x.Id == eventId);
 
-        if (schoolEvent is null) return Result<SchoolEvent>.Fail("Event not found");
+        if (schoolEvent is null) return Result<bool>.Fail("Event not found");
 
         schoolEvent.Status = EventStatus.Cancelled;
         await context.SaveChangesAsync();
-        return Result<SchoolEvent>.Ok(schoolEvent);
+        return Result<bool>.Ok(true);
     }
     //Cancel_School_Event-------------------------------------------------------------
 

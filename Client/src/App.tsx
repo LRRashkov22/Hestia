@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
 import heroImg from './assets/hero.png'
 import './App.css'
 import { login } from './api/auth'
@@ -19,6 +19,24 @@ function App() {
     remember: true,
   })
   const [status, setStatus] = useState('')
+  const [path, setPath] = useState(window.location.pathname)
+
+  useEffect(() => {
+    const handleLocation = () => setPath(window.location.pathname)
+    window.addEventListener('popstate', handleLocation)
+
+    if (
+      window.location.pathname === '/' &&
+      localStorage.getItem('accessToken') &&
+      localStorage.getItem('role')?.toLowerCase() === 'organizer'
+    ) {
+      window.history.replaceState(null, '', '/organizer/dashboard')
+      setPath('/organizer/dashboard')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
+
+    return () => window.removeEventListener('popstate', handleLocation)
+  }, [])
 
   const updateTextField =
     (field: 'email' | 'password') =>
@@ -56,8 +74,11 @@ function App() {
           try { role = JSON.parse(role)[0] ?? role } catch { }
         }
         role = role.replace(/^"|"$/g, '')
-        if (role.toLowerCase() === 'organizer') {
-          window.location.href = '/events'
+        if (
+          role.toLowerCase() === 'organizer' ||
+          form.email.toLowerCase() === 'admin@gmail.com'
+        ) {
+          window.location.href = `${window.location.origin}/organizer/dashboard`
           return
         }
       } catch (err: any) {
@@ -67,10 +88,9 @@ function App() {
   }
 
   // simple client-side routing
-  const path = window.location.pathname
   if (path === '/register') return <Register />
   if (path === '/forgot-password') return <ForgotPassword />
-  if (path === '/events') return <OrganizerDashboard />
+  if (path === '/organizer/dashboard') return <OrganizerDashboard />
 
   return (
     <main className="login-shell">

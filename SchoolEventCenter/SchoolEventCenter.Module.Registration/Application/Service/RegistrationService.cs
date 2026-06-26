@@ -3,10 +3,11 @@ using SchoolEventCenter.Module.Data.Domain.Entities;
 using SchoolEventCenter.Module.Data.Domain.Enums;
 using SchoolEventCenter.Module.Data.Persistance;
 using SchoolEventCenter.Module.Data.Shared.Common;
+using SchoolEventCenter.Module.Registrations.Application.Interface;
 using System.Data;
 namespace SchoolEventCenter.Module.Registrations.Application.Service;
 
-public class RegistrationService
+public class RegistrationService : IRegistrationService
 {
     private readonly SECDbContext context;
     public RegistrationService(SECDbContext context)

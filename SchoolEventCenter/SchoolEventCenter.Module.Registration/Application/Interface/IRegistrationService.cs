@@ -6,7 +6,7 @@ public interface IRegistrationService
 {
     Task<Result<Registration>> RegisterAsync(Guid eventId, Guid userId);
 
-    Task<Result<bool>> CancelRegistrationAsync(Guid eventId, Guid userId);
+    Task<Result<Registration>> CancelRegistrationAsync(Guid eventId, Guid userId);
 
     //Task<Result<List<RegistrationListDto>>> GetMyRegistrationsAsync(Guid userId);
 

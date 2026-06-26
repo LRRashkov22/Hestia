@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SchoolEvemtCenter.Module.SchoolEventsManagement\SchoolEvemtCenter.Module.SchoolEventsManagement.csproj" />
+    <ProjectReference Include="..\SchoolEventCenter.Infrastructure\SchoolEventCenter.Infrastructure.csproj" />
     <ProjectReference Include="..\SchoolEventCenter.Module.Data\SchoolEventCenter.Module.Data.csproj" />
     <ProjectReference Include="..\SchoolEventCenter.Module.Registration\SchoolEventCenter.Module.Registrations.csproj" />
     <ProjectReference Include="..\ScoolEventCenter.Module.Identity\ScoolEventCenter.Module.Identity.csproj" />

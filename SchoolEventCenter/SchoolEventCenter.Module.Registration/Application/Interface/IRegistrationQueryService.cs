@@ -8,4 +8,8 @@ public interface IRegistrationQueryService
 {
     Task<Result<List<OrganizerRegistrationDto>>> GetOrganizerRegistrationsAsync
    (Guid organizerId, RegistrationStatus status, string? search, Guid? eventId);
+    Task<Result<List<StudentRegistrationDto>>> GetMyRegistrationsAsync(Guid userId);
+    Task<Result<List<StudentUpcomingRegistrationDto>>> GetUpcomingRegistrationsAsync(Guid userId);
 }
+
+

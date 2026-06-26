@@ -18,7 +18,6 @@ public class RegistrationQueriesService : IRegistrationQueryService
 
     //Get Registration Page Information (Confirmed/Waitlisted/Search/Filter(By Event Existing Events)) (ORGANIZER PAGE) 
     public async Task<Result<List<OrganizerRegistrationDto>>> GetOrganizerRegistrationsAsync
-   //trqbwa da naprawish endpoint
    (Guid organizerId, RegistrationStatus status, string? search, Guid? eventId)
     {
         var query = context
@@ -42,7 +41,7 @@ public class RegistrationQueriesService : IRegistrationQueryService
         }
 
         var registrations = await query
-            .OrderBy(x => x.RegisteredAt)
+            .OrderBy(x => x.WaitlistPosition)
             .Select(x => new OrganizerRegistrationDto
             {
                 Username = x.User.Username,
@@ -58,5 +57,60 @@ public class RegistrationQueriesService : IRegistrationQueryService
             .ToListAsync();
 
         return Result<List<OrganizerRegistrationDto>>.Ok(registrations);
+    }
+
+    public async Task<Result<List<StudentUpcomingRegistrationDto>>>
+    GetUpcomingRegistrationsAsync(Guid userId)
+    {
+        var registrations = await context
+            .Set<Registration>()
+            .AsNoTracking()
+            .Where(x =>
+                x.UserId == userId &&
+                x.SchoolEvent.Status == EventStatus.Published &&
+                x.SchoolEvent.StartsAt > DateTime.UtcNow)
+            .OrderBy(x => x.SchoolEvent.StartsAt)
+            .Take(4)
+            .Select(x => new StudentUpcomingRegistrationDto
+            {
+                EventId = x.SchoolEventId,
+                Title = x.SchoolEvent.Title,
+                StartsAt = x.SchoolEvent.StartsAt,
+                RegistrationStatus = x.Status,
+                WaitlistPosition =
+                    x.Status == RegistrationStatus.Waitlisted
+                    ? x.WaitlistPosition
+                    : null
+            })
+            .ToListAsync();
+
+        return Result<List<StudentUpcomingRegistrationDto>>.Ok(registrations);
+    }
+
+    public async Task<Result<List<StudentRegistrationDto>>> GetMyRegistrationsAsync(Guid userId)
+    {
+        var registrations = await context
+            .Set<Registration>()
+            .AsNoTracking()
+            .Where(x =>
+                x.UserId == userId)
+            .OrderBy(x =>
+                x.SchoolEvent.StartsAt)
+            .Select(x => new StudentRegistrationDto
+            {
+                EventId = x.SchoolEventId,
+                Title = x.SchoolEvent.Title,
+                RegisteredAt = x.RegisteredAt,
+                StartsAt = x.SchoolEvent.StartsAt,
+                RegistrationStatus = x.Status,
+                WaitlistPosition =
+                    x.Status == RegistrationStatus.Waitlisted
+                    ? x.WaitlistPosition
+                    : null
+            })
+            .OrderByDescending(x => x.RegisteredAt)
+            .ToListAsync();
+
+        return Result<List<StudentRegistrationDto>>.Ok(registrations);
     }
 }

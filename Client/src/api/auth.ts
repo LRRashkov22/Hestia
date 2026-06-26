@@ -1,29 +1,60 @@
-// In dev use the Vite dev-server proxy by calling relative `/api/...`
-// In production, use the configured VITE_API_BASE_URL.
-const rawBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5024/'
-const normalizedBase = rawBase.endsWith('/') ? rawBase : rawBase + '/'
-const PROD_BASE = `${normalizedBase}api/identity`
-// Use the configured API base URL directly (no dev proxy)
-const BASE = PROD_BASE
+// Use Vite proxy and same‑origin routing in development and production.
+const BASE = '/api/identity'
 
-type TokenResponse = { AccessToken: string; RefreshToken: string }
+type TokenResponse = {
+  AccessToken?: string
+  RefreshToken?: string
+  accessToken?: string
+  refreshToken?: string
+}
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${BASE}/login`, {
+  const url = `${BASE}/login`
+  console.debug('login fetch', { url, email })
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
+  console.debug('login response status', res.status, res.ok)
+  
   if (!res.ok) {
     const text = await res.text()
+    console.error('login not ok', res.status, text)
     throw new Error(text || 'Login failed')
   }
-  const data = (await res.json()) as TokenResponse
-  localStorage.setItem('accessToken', data.AccessToken)
-  localStorage.setItem('refreshToken', data.RefreshToken)
+  
+  const text = await res.text()
+  console.debug('login response text', text)
+  
+  let data: TokenResponse
+  try {
+    data = JSON.parse(text)
+  } catch (e) {
+    console.error('login json parse error', e, text)
+    throw new Error('Login response is not valid JSON')
+  }
+  
+  console.debug('login response data', data)
+  const accessToken = data.AccessToken ?? data.accessToken
+  const refreshToken = data.RefreshToken ?? data.refreshToken
+
+  console.debug('extracted tokens', { accessToken: !!accessToken, refreshToken: !!refreshToken })
+
+  if (!accessToken || !refreshToken) {
+    console.error('login missing tokens', { accessToken, refreshToken, data })
+    throw new Error('Login succeeded but did not return valid tokens.')
+  }
+
+  localStorage.setItem('accessToken', accessToken)
+  localStorage.setItem('refreshToken', refreshToken)
+  console.debug('token saved', {
+    accessToken: localStorage.getItem('accessToken'),
+    refreshToken: localStorage.getItem('refreshToken'),
+  })
   // try to decode role from JWT and store it
   try {
-    let b = data.AccessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    let b = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
     while (b.length % 4) b += '='
     const payload = JSON.parse(decodeURIComponent(escape(atob(b))))
     let role: any = payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.roles || payload['roles']
