@@ -426,6 +426,7 @@ function EventDetailsView({
 function EventsView() {
   const [events, setEvents] = useState<EventItem[]>(eventCatalog)
   const [selectedCategory, setSelectedCategory] = useState<CategoryName>('All')
+  const [selectedStatus, setSelectedStatus] = useState<string>('All')
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [eventDetails, setEventDetails] = useState<StudentEventDetails | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
@@ -433,10 +434,17 @@ function EventsView() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
-  const visibleEvents =
-    selectedCategory === 'All'
-      ? events
-      : events.filter((event) => event.category === selectedCategory)
+  
+  let visibleEvents = selectedCategory === 'All'
+    ? events
+    : events.filter((event) => event.category === selectedCategory)
+  
+  if (selectedStatus !== 'All') {
+    visibleEvents = visibleEvents.filter((event) => {
+      const statusLower = selectedStatus.toLowerCase()
+      return event.tags.some((tag) => tag.toLowerCase() === statusLower)
+    })
+  }
 
   const selectedEvent = selectedEventId
     ? events.find((event) => event.id === selectedEventId) ?? null
@@ -538,7 +546,7 @@ function EventsView() {
           <span>Search</span>
           <input type="search" placeholder="Search events, locations..." />
         </label>
-        <select aria-label="Event status filter" defaultValue="All">
+        <select aria-label="Event status filter" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
           <option>All</option>
           <option>Published</option>
           <option>Confirmed</option>
