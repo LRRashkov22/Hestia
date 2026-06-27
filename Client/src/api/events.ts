@@ -17,7 +17,8 @@ async function handleRes(res: Response) {
   if (!res.ok) {
     const text = await res.text()
     console.error('events request failed', res.status, text)
-    throw new Error(text || 'Request failed')
+    const errorMessage = text?.trim() || `Request failed (${res.status} ${res.statusText})`
+    throw new Error(errorMessage)
   }
   if (res.status === 204) return null
   return res.json()
@@ -48,7 +49,7 @@ export function publishEvent(eventId: string) {
 }
 
 export function cancelEvent(eventId: string) {
-  return fetch(`${BASE}/${eventId}/cancel`, { method: 'POST', headers: jsonHeaders() }).then(handleRes)
+  return fetch(`${BASE}/${eventId}/registrations`, { method: 'DELETE', headers: jsonHeaders() }).then(handleRes)
 }
 
 // Organizer dashboard
