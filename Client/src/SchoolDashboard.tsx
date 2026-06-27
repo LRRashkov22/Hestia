@@ -427,6 +427,7 @@ function EventsView() {
   const [events, setEvents] = useState<EventItem[]>(eventCatalog)
   const [selectedCategory, setSelectedCategory] = useState<CategoryName>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
+  const [searchText, setSearchText] = useState<string>('')
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [eventDetails, setEventDetails] = useState<StudentEventDetails | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
@@ -444,6 +445,15 @@ function EventsView() {
       const statusLower = selectedStatus.toLowerCase()
       return event.tags.some((tag) => tag.toLowerCase() === statusLower)
     })
+  }
+
+  if (searchText.trim()) {
+    const query = searchText.toLowerCase()
+    visibleEvents = visibleEvents.filter((event) =>
+      event.title.toLowerCase().includes(query) ||
+      event.description.toLowerCase().includes(query) ||
+      event.location.toLowerCase().includes(query)
+    )
   }
 
   const selectedEvent = selectedEventId
@@ -544,7 +554,7 @@ function EventsView() {
       <div className="events-filter-row">
         <label className="events-search">
           <span>Search</span>
-          <input type="search" placeholder="Search events, locations..." />
+          <input type="search" placeholder="Search events, locations..." value={searchText} onChange={(e) => setSearchText(e.target.value)} />
         </label>
         <select aria-label="Event status filter" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
           <option>All</option>
