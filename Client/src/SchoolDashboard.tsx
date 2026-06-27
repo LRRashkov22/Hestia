@@ -599,6 +599,12 @@ function EventsView() {
 }
 
 function RegistrationsView() {
+  const [selectedTab, setSelectedTab] = useState<string>('All')
+  
+  const filteredRegistrations = selectedTab === 'All'
+    ? registrations
+    : registrations.filter((reg) => reg.status === selectedTab.toLowerCase())
+
   return (
     <section className="page-view">
       <div className="page-heading">
@@ -614,13 +620,22 @@ function RegistrationsView() {
 
       <section className="registrations-table-card">
         <div className="table-tabs">
-          {['All', 'Confirmed', 'Waitlisted', 'Cancelled'].map((tab) => <button className={tab === 'All' ? 'active' : ''} type="button" key={tab}>{tab}</button>)}
+          {['All', 'Confirmed', 'Waitlisted', 'Cancelled'].map((tab) => (
+            <button
+              className={tab === selectedTab ? 'active' : ''}
+              type="button"
+              key={tab}
+              onClick={() => setSelectedTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
         <div className="registrations-table">
           <div className="table-row table-head">
             <span>Event</span><span>Date</span><span>Status</span><span>Waitlist Position</span><span>Actions</span>
           </div>
-          {registrations.map((item) => (
+          {filteredRegistrations.map((item) => (
             <div className="table-row" key={item.title}>
               <div><strong>{item.title}</strong><small>{item.registered}</small></div>
               <span>{item.date}</span>
