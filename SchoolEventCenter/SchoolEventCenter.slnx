@@ -3,6 +3,7 @@
   <Project Path="SchoolEventCenter.Infrastructure/SchoolEventCenter.Infrastructure.csproj" Id="d46c1f10-5ac4-47d3-a46c-29facbe7caff" />
   <Project Path="SchoolEventCenter.Module.Data/SchoolEventCenter.Module.Data.csproj" />
   <Project Path="SchoolEventCenter.Module.Registration/SchoolEventCenter.Module.Registrations.csproj" Id="fad3d6d5-7d56-4556-bd13-9e4d4d674108" />
+  <Project Path="SchoolEventCenter.Worker/SchoolEventCenter.Worker.csproj" Id="42b95173-d0ef-4c1f-b976-ab29587a6ab3" />
   <Project Path="SchoolEventCenter/SchoolEventCenter.Api.csproj" />
   <Project Path="ScoolEventCenter.Module.Identity/ScoolEventCenter.Module.Identity.csproj" />
 </Solution>

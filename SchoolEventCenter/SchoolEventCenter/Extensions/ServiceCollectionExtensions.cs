@@ -6,6 +6,7 @@ using SchoolEvemtCenter.Module.SchoolEventsManagement;
 using SchoolEventCenter.Infrastructure;
 using SchoolEventCenter.Module.Data;
 using SchoolEventCenter.Module.Data.Options;
+using SchoolEventCenter.Module.Registrations;
 using ScoolEventCenter.Module.Identity;
 using System.Text;
 namespace SchoolEventCenter.Api.Extensions;
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddIdentityModule();
         services.AddSchoolEventModule();
+        services.AddRegistrationModule();
     }
 
     //------------------------------------------------------------------------------------

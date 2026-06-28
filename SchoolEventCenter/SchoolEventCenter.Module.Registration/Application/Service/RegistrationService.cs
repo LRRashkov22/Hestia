@@ -1,8 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SchoolEventCenter.Module.Data.Domain.Entities;
 using SchoolEventCenter.Module.Data.Domain.Enums;
+using SchoolEventCenter.Module.Data.Domain.Events;
 using SchoolEventCenter.Module.Data.Persistance;
+using SchoolEventCenter.Module.Data.Shared;
 using SchoolEventCenter.Module.Data.Shared.Common;
+using SchoolEventCenter.Module.Registrations.Application.DTOs;
 using SchoolEventCenter.Module.Registrations.Application.Interface;
 using System.Data;
 namespace SchoolEventCenter.Module.Registrations.Application.Service;
@@ -10,12 +13,14 @@ namespace SchoolEventCenter.Module.Registrations.Application.Service;
 public class RegistrationService : IRegistrationService
 {
     private readonly SECDbContext context;
-    public RegistrationService(SECDbContext context)
+    private readonly IEventPublisher eventPublisher;
+    public RegistrationService(SECDbContext context, IEventPublisher eventPublisher)
     {
         this.context = context;
+        this.eventPublisher = eventPublisher;
     }
 
-    public async Task<Result<Registration>> RegisterAsync(Guid eventId, Guid userId)
+    public async Task<Result<RegistrationResponseDto>> RegisterAsync(Guid eventId, Guid userId)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable);
@@ -30,7 +35,7 @@ public class RegistrationService : IRegistrationService
                     x.EndsAt > DateTime.UtcNow);
 
             if (schoolEvent is null)
-                return Result<Registration>.Fail("Event not found");
+                return Result<RegistrationResponseDto>.Fail("Event not found");
 
             var alreadyRegistered = await context
                 .Set<Registration>()
@@ -39,7 +44,7 @@ public class RegistrationService : IRegistrationService
                     x.UserId == userId);
 
             if (alreadyRegistered)
-                return Result<Registration>.Fail("Already registered");
+                return Result<RegistrationResponseDto>.Fail("Already registered");
 
             var confirmedCount = await context
                 .Set<Registration>()
@@ -80,16 +85,51 @@ public class RegistrationService : IRegistrationService
             await context.SaveChangesAsync();
 
             await transaction.CommitAsync();
+            Console.WriteLine("Publishing RegistrationConfirmedEvent");
+            if (status == RegistrationStatus.Confirmed)
+            {
+                Console.WriteLine("Publishing RegistrationConfirmedEvent");
+                Console.WriteLine($"Registration.UserId = {registration.UserId}");
+                await eventPublisher.PublishAsync(
+                    new RegistrationConfirmedEvent
+                    {
+                        RegistrationId = registration.Id,
+                        EventId = registration.SchoolEventId,
+                        userId = registration.UserId,
+                        OccurredAt = registration.RegisteredAt
+                    });
+                Console.WriteLine("Published RegistrationConfirmedEvent");
+            }
+            else
+            {
+                await eventPublisher.PublishAsync(
+                    new RegistrationWaitlistedEvent
+                    {
+                        RegistrationId = registration.Id,
+                        EventId = registration.SchoolEventId,
+                        userId = registration.UserId,
+                        waitlistPosition = registration.WaitlistPosition!.Value,
+                        OccurredAt = registration.RegisteredAt
+                    });
+            }
 
-            return Result<Registration>.Ok(registration);
+
+            return Result<RegistrationResponseDto>.Ok(
+                new RegistrationResponseDto
+                {
+                    RegistrationId = registration.Id,
+                    Status = registration.Status,
+                    WaitlistPosition = registration.WaitlistPosition
+                });
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
             await transaction.RollbackAsync();
             throw;
         }
     }
-    public async Task<Result<Registration>> CancelRegistrationAsync(Guid eventId, Guid userId)
+    public async Task<Result<RegistrationResponseDto>> CancelRegistrationAsync(Guid eventId, Guid userId)
     {
         await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
@@ -98,7 +138,9 @@ public class RegistrationService : IRegistrationService
             var registration = await GetRegistrationAsync(eventId, userId);
 
             if (registration is null)
-                return Result<Registration>.Fail("Registration not found");
+                return Result<RegistrationResponseDto>.Fail("Registration not found");
+
+            Registration? promotedRegistration = null;
 
             if (registration.Status == RegistrationStatus.Waitlisted)
             {
@@ -106,17 +148,46 @@ public class RegistrationService : IRegistrationService
             }
             else
             {
-                await HandleConfirmedCancellationAsync(registration, eventId);
+                promotedRegistration = await HandleConfirmedCancellationAsync(registration, eventId);
             }
-
+            foreach (var e in context.ChangeTracker.Entries<Registration>())
+            {
+                Console.WriteLine(
+                    $"Entity={e.Entity.Id}");
+                Console.WriteLine(
+                    $"State={e.State}");
+                Console.WriteLine(
+                    $"Status={e.Entity.Status}");
+                Console.WriteLine(
+                    $"Position={e.Entity.WaitlistPosition}");
+            }
             await context.SaveChangesAsync();
 
             await transaction.CommitAsync();
 
-            return Result<Registration>.Ok(registration);
+            if (promotedRegistration is not null)
+            {
+                await eventPublisher.PublishAsync(
+                    new WaitlistPromotedEvent
+                    {
+                        RegistrationId = promotedRegistration.Id,
+                        EventId = promotedRegistration.SchoolEventId,
+                        userId = promotedRegistration.UserId,
+                        OccurredAt = DateTime.UtcNow,
+                    });
+            }
+
+            return Result<RegistrationResponseDto>.Ok(
+                new RegistrationResponseDto
+                {
+                    RegistrationId = registration.Id,
+                    Status = registration.Status,
+                    WaitlistPosition = registration.WaitlistPosition
+                });
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine(ex);
             await transaction.RollbackAsync();
 
             throw;
@@ -147,48 +218,61 @@ public class RegistrationService : IRegistrationService
             .OrderBy(x => x.WaitlistPosition)
             .ToListAsync();
 
+
+        Console.WriteLine("WAITLIST");
+
+        foreach (var r in waitlisted)
+        {
+            Console.WriteLine(
+                $"Id={r.Id} Status={r.Status} Position={r.WaitlistPosition}");
+        }
+
+
         foreach (var item in waitlisted)
         {
             item.WaitlistPosition--;
         }
     }
 
-    private async Task HandleConfirmedCancellationAsync(Registration registration, Guid eventId)
+    private async Task<Registration?> HandleConfirmedCancellationAsync(Registration registration, Guid eventId)
     {
         context.Registrations.Remove(registration);
 
-        await PromoteFirstWaitlistedAsync(eventId);
+        var promoted = await PromoteFirstWaitlistedAsync(eventId);
 
-        await ReorderWaitlistAsync(eventId);
+        if (promoted is not null)
+        {
+            await ReorderWaitlistAsync(eventId, promoted.Id);
+        }
+        return promoted;
     }
 
-    private async Task PromoteFirstWaitlistedAsync(Guid eventId)
+    private async Task<Registration?> PromoteFirstWaitlistedAsync(Guid eventId)
     {
-        var firstWaitlisted = await context
-            .Set<Registration>()
+        var firstWaitlisted = await context.Registrations
             .Where(x =>
                 x.SchoolEventId == eventId &&
                 x.Status == RegistrationStatus.Waitlisted)
-            .OrderBy(x =>
-                x.WaitlistPosition)
+            .OrderBy(x => x.WaitlistPosition)
             .FirstOrDefaultAsync();
 
-        if (firstWaitlisted is null) return;
+        if (firstWaitlisted is null)
+            return null;
 
         firstWaitlisted.Status = RegistrationStatus.Confirmed;
-
         firstWaitlisted.WaitlistPosition = null;
+
+        return firstWaitlisted;
     }
 
-    private async Task ReorderWaitlistAsync(Guid eventId)
+    private async Task ReorderWaitlistAsync(Guid eventId, Guid promotedId)
     {
-        var waitlisted = await context
-            .Set<Registration>()
+        var waitlisted = await context.Registrations
             .Where(x =>
                 x.SchoolEventId == eventId &&
-                x.Status == RegistrationStatus.Waitlisted)
-            .OrderBy(x =>
-                x.WaitlistPosition)
+                x.Status == RegistrationStatus.Waitlisted &&
+                x.Id != promotedId)
+            .OrderBy(x => x.WaitlistPosition)
             .ToListAsync();
 
         int position = 1;
@@ -196,7 +280,6 @@ public class RegistrationService : IRegistrationService
         foreach (var item in waitlisted)
         {
             item.WaitlistPosition = position++;
-
         }
     }
 

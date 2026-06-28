@@ -1,12 +1,12 @@
-﻿using SchoolEventCenter.Module.Data.Domain.Entities;
-using SchoolEventCenter.Module.Data.Shared.Common;
+﻿using SchoolEventCenter.Module.Data.Shared.Common;
+using SchoolEventCenter.Module.Registrations.Application.DTOs;
 namespace SchoolEventCenter.Module.Registrations.Application.Interface;
 
 public interface IRegistrationService
 {
-    Task<Result<Registration>> RegisterAsync(Guid eventId, Guid userId);
+    Task<Result<RegistrationResponseDto>> RegisterAsync(Guid eventId, Guid userId);
 
-    Task<Result<Registration>> CancelRegistrationAsync(Guid eventId, Guid userId);
+    Task<Result<RegistrationResponseDto>> CancelRegistrationAsync(Guid eventId, Guid userId);
 
     //Task<Result<List<RegistrationListDto>>> GetMyRegistrationsAsync(Guid userId);
 

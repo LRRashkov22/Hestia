@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolEventCenter.Module.Data.Domain.Enums;
 using SchoolEventCenter.Module.Registrations.Application.Interface;
-using SchoolEventCenter.Module.Registrations.Application.Service;
 using System.Security.Claims;
 
 namespace SchoolEventCenter.Module.Registrations.Presentation;
@@ -11,12 +10,12 @@ namespace SchoolEventCenter.Module.Registrations.Presentation;
 [Route("api")]
 public class RegistrationController : ControllerBase
 {
-    private readonly RegistrationService registrationService;
+    private readonly IRegistrationService registrationService;
 
     private readonly IRegistrationQueryService registrationQuery;
 
     public RegistrationController(
-        RegistrationService registrationService,
+        IRegistrationService registrationService,
         IRegistrationQueryService registrationQuery)
     {
         this.registrationService = registrationService;

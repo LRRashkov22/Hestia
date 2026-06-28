@@ -2,6 +2,7 @@
 
 public interface IDomainEvent
 {
-    Guid eventId { get; set; }
-    DateTime OccurredAt { get; set; }
+    Guid EventId { get; }
+    DateTime OccurredAt { get; }
+    string RoutingKey { get; }
 }

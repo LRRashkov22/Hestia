@@ -8,7 +8,7 @@ namespace SchoolEventCenter.Module.Registrations;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddSchoolEventModule(this IServiceCollection services)
+    public static IServiceCollection AddRegistrationModule(this IServiceCollection services)
     {
 
         services.AddControllers().PartManager.ApplicationParts

@@ -3,7 +3,9 @@ using SchoolEvemtCenter.Module.SchoolEventsManagement.Application.DTOs.Organizer
 using SchoolEvemtCenter.Module.SchoolEventsManagement.Application.Interfaces;
 using SchoolEventCenter.Module.Data.Domain.Entities;
 using SchoolEventCenter.Module.Data.Domain.Enums;
+using SchoolEventCenter.Module.Data.Domain.Events;
 using SchoolEventCenter.Module.Data.Persistance;
+using SchoolEventCenter.Module.Data.Shared;
 using SchoolEventCenter.Module.Data.Shared.Common;
 namespace SchoolEvemtCenter.Module.SchoolEventsManagement.Application.Service;
 
@@ -11,9 +13,11 @@ namespace SchoolEvemtCenter.Module.SchoolEventsManagement.Application.Service;
 public class SchoolEventCRUDService : ISchoolEventCRUDService
 {
     private readonly SECDbContext context;
-    public SchoolEventCRUDService(SECDbContext context)
+    private readonly IEventPublisher eventPublisher;
+    public SchoolEventCRUDService(SECDbContext context, IEventPublisher eventPublisher)
     {
         this.context = context;
+        this.eventPublisher = eventPublisher;
     }
 
 
@@ -88,6 +92,12 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
 
         schoolEvent.Status = EventStatus.Cancelled;
         await context.SaveChangesAsync();
+        await eventPublisher.PublishAsync(
+        new EventCancelledEvent
+        {
+            EventId = eventId,
+            OccurredAt = DateTime.UtcNow,
+        });
         return Result<bool>.Ok(true);
     }
     //Cancel_School_Event-------------------------------------------------------------
