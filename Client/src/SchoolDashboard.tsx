@@ -1,12 +1,40 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getStudentEventDetails, cancelEvent } from './api/events'
 
-type ViewName = 'dashboard' | 'events' | 'registrations' | 'notifications'
+type ViewName = 'dashboard' | 'events' | 'eventDetails' | 'registrations' | 'notifications' | 'settings'
 type CategoryName = 'All' | 'Technology' | 'Career' | 'Workshop' | 'Academic' | 'Social' | 'Business' | 'Wellness'
+
+type NotificationItem = {
+  icon: string
+  title: string
+  type: string
+  text: string
+  event: string
+  age: string
+  tone: 'success' | 'warning' | 'plain'
+  unread?: boolean
+}
+
+type EventItem = {
+  id: string
+  category: string
+  title: string
+  description: string
+  date: string
+  time: string
+  location: string
+  registered: string
+  seatsLeft: string
+  progress: number
+  tags: string[]
+  waitlist?: string
+}
 
 const categories: CategoryName[] = ['All', 'Technology', 'Career', 'Workshop', 'Academic', 'Social', 'Business', 'Wellness']
 
-const eventCatalog = [
+const eventCatalog: EventItem[] = [
   {
+    id: '3d09c452-8efa-4cfc-9c1f-b57c8e7f1b8f',
     category: 'Technology',
     title: 'Annual Hackathon 2025',
     description: 'A 48-hour coding competition where teams of 2-4 students build innovative solutions to real-world problems.',
@@ -19,6 +47,7 @@ const eventCatalog = [
     tags: ['published', 'confirmed'],
   },
   {
+    id: 'a4b1d7ad-eca3-4b9e-a6d6-5b2c9c8d7f93',
     category: 'Career',
     title: 'Career Fair - Summer 2025',
     description: 'Meet recruiters from 50+ top companies spanning technology, finance, healthcare, and consulting.',
@@ -31,6 +60,7 @@ const eventCatalog = [
     tags: ['published', 'cancelled'],
   },
   {
+    id: 'b66e3c19-38a8-46ef-af1e-d4f7c3f66726',
     category: 'Workshop',
     title: 'Design Thinking Workshop',
     description: 'An immersive half-day workshop exploring human-centered design principles and practical product discovery.',
@@ -44,6 +74,7 @@ const eventCatalog = [
     tags: ['published', 'Full', 'waitlisted'],
   },
   {
+    id: 'c4e4f137-ff91-4f79-a8a3-1b24b5d7c6a8',
     category: 'Academic',
     title: 'Research Symposium 2025',
     description: 'Graduate students and faculty present their latest research findings across departments.',
@@ -56,6 +87,7 @@ const eventCatalog = [
     tags: ['published', 'confirmed'],
   },
   {
+    id: 'd2b88a4e-cc1d-4d78-9996-c4564f4b8e9b',
     category: 'Social',
     title: 'International Food Festival',
     description: 'Celebrate cultural diversity with food, music, and performances from student organizations.',
@@ -68,6 +100,7 @@ const eventCatalog = [
     tags: ['published'],
   },
   {
+    id: 'f4d3ab7e-6faf-42b7-8c1c-9c1b0a8c9f91',
     category: 'Technology',
     title: 'AI & Ethics Panel Discussion',
     description: 'Industry leaders and academics discuss the ethical implications of artificial intelligence in society.',
@@ -99,7 +132,7 @@ const registrations = [
   { title: 'Career Fair - Summer 2025', date: 'Jul 22, 2025', registered: 'Registered Jun 8, 2025', status: 'cancelled', waitlist: '-' },
 ]
 
-const notifications = [
+const initialNotifications: NotificationItem[] = [
   {
     icon: 'OK',
     title: 'Registration Confirmed',
@@ -235,12 +268,281 @@ function DashboardView({ setView }: { setView: (view: ViewName) => void }) {
   )
 }
 
+type StudentEventDetails = EventItem & {
+  website?: string
+  organizer?: string
+  capacityDescription?: string
+}
+
+function EventDetailsView({
+  event,
+  onBack,
+  onRequestCancel,
+  cancelDialogOpen,
+  cancelLoading,
+  cancelError,
+  onCancelConfirm,
+  onCancelDialogClose,
+  loading,
+  error,
+}: {
+  event: StudentEventDetails
+  onBack: () => void
+  onRequestCancel: () => void
+  cancelDialogOpen: boolean
+  cancelLoading: boolean
+  cancelError: string | null
+  onCancelConfirm: () => void
+  onCancelDialogClose: () => void
+  loading: boolean
+  error: string | null
+}) {
+  const registeredCount = parseInt(event.registered || '0', 10) || 0
+  const capacityCount = parseInt((event.registered.split('/')[1] || '').replace(/\D/g, ''), 10) || registeredCount
+  const waitlistCount = event.waitlist ? parseInt(event.waitlist.replace(/\D/g, ''), 10) || 0 : Math.max(capacityCount - registeredCount, 0)
+
+  return (
+    <section className="page-view event-details-page">
+      <div className="page-heading event-details-heading">
+        <button type="button" className="back-button" onClick={onBack}>
+          ← Back to Events
+        </button>
+      </div>
+
+      {loading && <p className="loading-text">Loading event details...</p>}
+      {error && <p className="error-text">{error}</p>}
+
+      <div className="event-details-hero">
+        <div className="event-details-main">
+          <div className="tag-row">
+            {event.tags.map((tag) => (
+              <span className={`tag ${tag.toLowerCase()}`} key={tag}>{tag}</span>
+            ))}
+          </div>
+          <h1>{event.title}</h1>
+          <p>{event.description}</p>
+        </div>
+
+        <aside className="event-details-summary">
+          <div className={`status-chip ${event.tags.includes('cancelled') ? 'status-cancelled' : 'status-published'}`}>
+            {event.tags.includes('cancelled') ? 'Registration cancelled' : "You're registered!"}
+          </div>
+          <p>See you on {event.date}</p>
+          <button
+            type="button"
+            disabled={loading || event.tags.includes('cancelled')}
+            className="primary-button"
+            onClick={onRequestCancel}
+          >
+            Cancel Registration
+          </button>
+        </aside>
+      </div>
+
+      {cancelDialogOpen && (
+        <div className="modal-backdrop" aria-modal="true" role="dialog">
+          <div className="cancel-confirmation-modal">
+            <div className="modal-header">
+              <h2>Cancel Registration</h2>
+              <button type="button" className="icon-button close-button" aria-label="Close" onClick={onCancelDialogClose}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Are you sure you want to cancel your registration for <strong>{event.title}</strong>? If you're confirmed, your spot may go to the next person on the waitlist.
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={onCancelDialogClose}>
+                Keep Registration
+              </button>
+              <button type="button" className="primary-button" onClick={onCancelConfirm} disabled={cancelLoading}>
+                {cancelLoading ? 'Cancelling...' : 'Cancel Registration'}
+              </button>
+            </div>
+            {cancelError && <p className="cancel-error-text">{cancelError}</p>}
+          </div>
+        </div>
+      )}
+
+      <div className="event-detail-grid event-detail-summary-grid">
+        <section className="event-detail-card event-detail-large-card">
+          <h2>Event Details</h2>
+          <div className="event-detail-list">
+            <div>
+              <span>Date</span>
+              <strong>{event.date}</strong>
+            </div>
+            <div>
+              <span>Time</span>
+              <strong>{event.time}</strong>
+            </div>
+            <div>
+              <span>Location</span>
+              <strong>{event.location}</strong>
+            </div>
+            {event.organizer && (
+              <div>
+                <span>Organizer</span>
+                <strong>{event.organizer}</strong>
+              </div>
+            )}
+            {event.website && (
+              <div>
+                <span>Website</span>
+                <strong><a href={event.website} target="_blank" rel="noreferrer">{event.website}</a></strong>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="event-detail-card event-detail-large-card capacity-card">
+          <h2>Capacity</h2>
+          <div className="capacity-grid">
+            <div>
+              <span>Capacity</span>
+              <strong>{capacityCount}</strong>
+            </div>
+            <div>
+              <span>Confirmed</span>
+              <strong>{registeredCount}</strong>
+            </div>
+            <div>
+              <span>Waitlist</span>
+              <strong>{waitlistCount}</strong>
+            </div>
+          </div>
+          <div className="progress-track large-progress">
+            <i style={{ width: `${Math.min((registeredCount / Math.max(capacityCount, 1)) * 100, 100)}%` }} />
+          </div>
+          <p className="event-summary-copy">{event.seatsLeft} • {event.registered}</p>
+        </section>
+      </div>
+    </section>
+  )
+}
+
 function EventsView() {
+  const [events, setEvents] = useState<EventItem[]>(eventCatalog)
   const [selectedCategory, setSelectedCategory] = useState<CategoryName>('All')
-  const visibleEvents =
-    selectedCategory === 'All'
-      ? eventCatalog
-      : eventCatalog.filter((event) => event.category === selectedCategory)
+  const [selectedStatus, setSelectedStatus] = useState<string>('All')
+  const [searchText, setSearchText] = useState<string>('')
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [eventDetails, setEventDetails] = useState<StudentEventDetails | null>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  
+  let visibleEvents = selectedCategory === 'All'
+    ? events
+    : events.filter((event) => event.category === selectedCategory)
+  
+  if (selectedStatus !== 'All') {
+    visibleEvents = visibleEvents.filter((event) => {
+      const statusLower = selectedStatus.toLowerCase()
+      return event.tags.some((tag) => tag.toLowerCase() === statusLower)
+    })
+  }
+
+  if (searchText.trim()) {
+    const query = searchText.toLowerCase()
+    visibleEvents = visibleEvents.filter((event) =>
+      event.title.toLowerCase().includes(query) ||
+      event.description.toLowerCase().includes(query) ||
+      event.location.toLowerCase().includes(query)
+    )
+  }
+
+  const selectedEvent = selectedEventId
+    ? events.find((event) => event.id === selectedEventId) ?? null
+    : null
+
+  useEffect(() => {
+    if (!selectedEventId || !selectedEvent) {
+      setEventDetails(null)
+      setDetailsError(null)
+      setLoadingDetails(false)
+      return
+    }
+
+    setLoadingDetails(true)
+    setDetailsError(null)
+    setEventDetails(selectedEvent)
+
+    void getStudentEventDetails(selectedEventId)
+      .then((details) => {
+        setEventDetails({ ...selectedEvent, ...details } as StudentEventDetails)
+      })
+      .catch((err) => {
+        setDetailsError(err?.message || 'Unable to load event details from the server.')
+      })
+      .finally(() => setLoadingDetails(false))
+
+  }, [selectedEventId, selectedEvent])
+
+  const handleRequestCancel = () => {
+    setCancelDialogOpen(true)
+    setCancelError(null)
+  }
+
+  const handleCancelDialogClose = () => {
+    setCancelDialogOpen(false)
+    setCancelError(null)
+  }
+
+  const handleConfirmCancel = () => {
+    if (!selectedEventId) return
+    setCancelLoading(true)
+    setCancelError(null)
+
+    void cancelEvent(selectedEventId)
+      .then(() => {
+        setCancelDialogOpen(false)
+        setCancelLoading(false)
+        setEvents((current) =>
+          current.map((event) =>
+            event.id === selectedEventId
+              ? {
+                  ...event,
+                  tags: [...new Set([...(event.tags.filter((tag) => tag !== 'confirmed')), 'cancelled'])],
+                }
+              : event,
+          ),
+        )
+        setEventDetails((current) =>
+          current
+            ? {
+                ...current,
+                tags: [...new Set([...(current.tags.filter((tag) => tag !== 'confirmed')), 'cancelled'])],
+              }
+            : current,
+        )
+      })
+      .catch((err) => {
+        setCancelError(err?.message || 'Unable to cancel your registration. Please try again.')
+      })
+      .finally(() => setCancelLoading(false))
+  }
+
+  if (selectedEvent) {
+    return (
+      <EventDetailsView
+        event={eventDetails ?? selectedEvent}
+        onBack={() => setSelectedEventId(null)}
+        onRequestCancel={handleRequestCancel}
+        cancelDialogOpen={cancelDialogOpen}
+        cancelLoading={cancelLoading}
+        onCancelConfirm={handleConfirmCancel}
+        onCancelDialogClose={handleCancelDialogClose}
+        cancelError={cancelError}
+        loading={loadingDetails}
+        error={detailsError}
+      />
+    )
+  }
 
   return (
     <section className="page-view">
@@ -252,9 +554,9 @@ function EventsView() {
       <div className="events-filter-row">
         <label className="events-search">
           <span>Search</span>
-          <input type="search" placeholder="Search events, locations..." />
+          <input type="search" placeholder="Search events, locations..." value={searchText} onChange={(e) => setSearchText(e.target.value)} />
         </label>
-        <select aria-label="Event status filter" defaultValue="All">
+        <select aria-label="Event status filter" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
           <option>All</option>
           <option>Published</option>
           <option>Confirmed</option>
@@ -278,7 +580,7 @@ function EventsView() {
       {visibleEvents.length > 0 ? (
         <div className="event-catalog-grid">
           {visibleEvents.map((event) => (
-          <article className={`catalog-card ${event.tags.includes('waitlisted') ? 'waitlist-card' : ''}`} key={event.title}>
+          <article className={`catalog-card ${event.tags.includes('waitlisted') ? 'waitlist-card' : ''}`} key={event.id}>
             <div className="tag-row">
               <span className="tag neutral">{event.category}</span>
               {event.tags.map((tag) => <span className={`tag ${tag.toLowerCase()}`} key={tag}>{tag}</span>)}
@@ -298,7 +600,7 @@ function EventsView() {
               <i style={{ width: `${event.progress}%` }} />
             </div>
             <div className="catalog-actions">
-              <button type="button">View Details</button>
+              <button type="button" onClick={() => setSelectedEventId(event.id)}>View Details</button>
               <button type="button">{event.tags.includes('waitlisted') ? '#3 Waitlist' : 'Registered'}</button>
             </div>
           </article>
@@ -315,6 +617,12 @@ function EventsView() {
 }
 
 function RegistrationsView() {
+  const [selectedTab, setSelectedTab] = useState<string>('All')
+  
+  const filteredRegistrations = selectedTab === 'All'
+    ? registrations
+    : registrations.filter((reg) => reg.status === selectedTab.toLowerCase())
+
   return (
     <section className="page-view">
       <div className="page-heading">
@@ -330,13 +638,22 @@ function RegistrationsView() {
 
       <section className="registrations-table-card">
         <div className="table-tabs">
-          {['All', 'Confirmed', 'Waitlisted', 'Cancelled'].map((tab) => <button className={tab === 'All' ? 'active' : ''} type="button" key={tab}>{tab}</button>)}
+          {['All', 'Confirmed', 'Waitlisted', 'Cancelled'].map((tab) => (
+            <button
+              className={tab === selectedTab ? 'active' : ''}
+              type="button"
+              key={tab}
+              onClick={() => setSelectedTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
         <div className="registrations-table">
           <div className="table-row table-head">
             <span>Event</span><span>Date</span><span>Status</span><span>Waitlist Position</span><span>Actions</span>
           </div>
-          {registrations.map((item) => (
+          {filteredRegistrations.map((item) => (
             <div className="table-row" key={item.title}>
               <div><strong>{item.title}</strong><small>{item.registered}</small></div>
               <span>{item.date}</span>
@@ -351,15 +668,25 @@ function RegistrationsView() {
   )
 }
 
-function NotificationsView() {
+function NotificationsView({
+  notifications,
+  unreadCount,
+  onMarkAllRead,
+}: {
+  notifications: NotificationItem[]
+  unreadCount: number
+  onMarkAllRead: () => void
+}) {
   return (
     <section className="page-view notification-page">
       <div className="page-heading split-heading">
         <div>
           <h1>Notifications</h1>
-          <p>2 unread notifications</p>
+          <p>{unreadCount} unread notification{unreadCount === 1 ? '' : 's'}</p>
         </div>
-        <button type="button">Mark all read</button>
+        <button type="button" onClick={onMarkAllRead}>
+          Mark all read
+        </button>
       </div>
 
       <div className="notification-page-list">
@@ -383,12 +710,201 @@ function NotificationsView() {
   )
 }
 
-export default function SchoolDashboard() {
-  const [view, setView] = useState<ViewName>('dashboard')
-  const [accountOpen, setAccountOpen] = useState(false)
+function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'system'; onThemeChange: (theme: 'light' | 'dark' | 'system') => void }) {
+  const [fullName, setFullName] = useState('Alex Chen')
+  const [email, setEmail] = useState('alex@university.edu')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [notifications, setNotifications] = useState({
+    confirmations: true,
+    waitlist: true,
+    promotions: true,
+    reminders: true,
+    newsletter: false,
+  })
 
   return (
-    <main className="school-app">
+    <section className="page-view settings-page">
+      <div className="page-heading">
+        <h1>Settings</h1>
+        <p>Manage your account preferences</p>
+      </div>
+
+      <div className="settings-container">
+        <section className="settings-card">
+          <div className="settings-header">
+            <span className="settings-icon">👤</span>
+            <div>
+              <h2>Profile</h2>
+              <p>Update your personal information</p>
+            </div>
+          </div>
+          <div className="settings-content">
+            <div className="avatar-section">
+              <div className="avatar-large">AC</div>
+              <div>
+                <h3>Change Avatar</h3>
+                <p>JPG, PNG up to 2MB</p>
+              </div>
+            </div>
+            <div className="settings-form-row">
+              <div className="form-field">
+                <label>Full Name</label>
+                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label>Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="form-field">
+              <label>Role</label>
+              <input type="text" value="Student" disabled />
+            </div>
+            <button className="primary-button">Save Profile</button>
+          </div>
+        </section>
+
+        <section className="settings-card">
+          <div className="settings-header">
+            <span className="settings-icon">🔒</span>
+            <div>
+              <h2>Change Password</h2>
+              <p>Keep your account secure</p>
+            </div>
+          </div>
+          <div className="settings-content">
+            <div className="form-field">
+              <label>Current Password</label>
+              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+            <div className="settings-form-row">
+              <div className="form-field">
+                <label>New Password</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 8 chars" />
+              </div>
+              <div className="form-field">
+                <label>Confirm Password</label>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+            </div>
+            <button className="primary-button">Update Password</button>
+          </div>
+        </section>
+
+        <section className="settings-card">
+          <div className="settings-header">
+            <span className="settings-icon">🔔</span>
+            <div>
+              <h2>Notification Preferences</h2>
+              <p>Choose what you want to be notified about</p>
+            </div>
+          </div>
+          <div className="settings-content notification-preferences">
+            <div className="preference-item">
+              <div>
+                <h3>Registration confirmations</h3>
+                <p>When your registration is confirmed</p>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={notifications.confirmations} onChange={(e) => setNotifications({ ...notifications, confirmations: e.target.checked })} />
+                <span className="toggle-switch" />
+              </label>
+            </div>
+            <div className="preference-item">
+              <div>
+                <h3>Waitlist updates</h3>
+                <p>When you're added to or removed from a waitlist</p>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={notifications.waitlist} onChange={(e) => setNotifications({ ...notifications, waitlist: e.target.checked })} />
+                <span className="toggle-switch" />
+              </label>
+            </div>
+            <div className="preference-item">
+              <div>
+                <h3>Waitlist promotions</h3>
+                <p>When you move up from the waitlist to confirmed</p>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={notifications.promotions} onChange={(e) => setNotifications({ ...notifications, promotions: e.target.checked })} />
+                <span className="toggle-switch" />
+              </label>
+            </div>
+            <div className="preference-item">
+              <div>
+                <h3>Event reminders</h3>
+                <p>24 hours before your registered events</p>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={notifications.reminders} onChange={(e) => setNotifications({ ...notifications, reminders: e.target.checked })} />
+                <span className="toggle-switch" />
+              </label>
+            </div>
+            <div className="preference-item">
+              <div>
+                <h3>Newsletter</h3>
+                <p>Weekly digest of upcoming events</p>
+              </div>
+              <label className="toggle">
+                <input type="checkbox" checked={notifications.newsletter} onChange={(e) => setNotifications({ ...notifications, newsletter: e.target.checked })} />
+                <span className="toggle-switch" />
+              </label>
+            </div>
+            <button className="primary-button">Save Preferences</button>
+          </div>
+        </section>
+
+        <section className="settings-card">
+          <div className="settings-header">
+            <span className="settings-icon">🎨</span>
+            <div>
+              <h2>Appearance</h2>
+              <p>Customize how the platform looks</p>
+            </div>
+          </div>
+          <div className="settings-content theme-options">
+            <button className={`theme-option ${theme === 'light' ? 'active' : ''}`} onClick={() => onThemeChange('light')}>
+              <span>☀️</span>
+              <div>Light</div>
+            </button>
+            <button className={`theme-option ${theme === 'dark' ? 'active' : ''}`} onClick={() => onThemeChange('dark')}>
+              <span>🌙</span>
+              <div>Dark</div>
+            </button>
+            <button className={`theme-option ${theme === 'system' ? 'active' : ''}`} onClick={() => onThemeChange('system')}>
+              <span>💻</span>
+              <div>System</div>
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
+  )
+}
+
+export default function SchoolDashboard() {
+  const [view, setView] = useState<ViewName>('dashboard')
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
+    const saved = localStorage.getItem('theme')
+    return (saved as 'light' | 'dark' | 'system') || 'light'
+  })
+  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications)
+  const [accountOpen, setAccountOpen] = useState(false)
+
+  const unreadCount = notifications.filter((item) => item.unread).length
+  const markAllRead = () => {
+    setNotifications((current) => current.map((item) => ({ ...item, unread: false })))
+  }
+
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  return (
+    <main className={`school-app theme-${theme}`}>
       <header className="school-topbar">
         <div className="topbar-brand">
           <button className="icon-button muted-button" aria-label="Close">x</button>
@@ -404,7 +920,7 @@ export default function SchoolDashboard() {
         <div className="topbar-profile">
           <button className="bell-button" type="button" aria-label="Notifications" onClick={() => setView('notifications')}>
             !
-            <span>2</span>
+            <span>{unreadCount}</span>
           </button>
           <button
             className="profile-trigger"
@@ -442,10 +958,10 @@ export default function SchoolDashboard() {
           <NavButton active={view === 'dashboard'} icon="DB" onClick={() => setView('dashboard')}>Dashboard</NavButton>
           <NavButton active={view === 'events'} icon="EV" onClick={() => setView('events')}>Events</NavButton>
           <NavButton active={view === 'registrations'} icon="MR" onClick={() => setView('registrations')}>My Registrations</NavButton>
-          <NavButton active={view === 'notifications'} icon="NO" count={2} onClick={() => setView('notifications')}>Notifications</NavButton>
+          <NavButton active={view === 'notifications'} icon="NO" count={unreadCount} onClick={() => setView('notifications')}>Notifications</NavButton>
         </nav>
         <div className="side-footer">
-          <button type="button"><span>ST</span>Settings</button>
+          <button type="button" onClick={() => setView('settings')}><span>ST</span>Settings</button>
           <button type="button" onClick={logout}><span>LO</span>Log out</button>
         </div>
       </aside>
@@ -454,7 +970,14 @@ export default function SchoolDashboard() {
         {view === 'dashboard' && <DashboardView setView={setView} />}
         {view === 'events' && <EventsView />}
         {view === 'registrations' && <RegistrationsView />}
-        {view === 'notifications' && <NotificationsView />}
+        {view === 'notifications' && (
+          <NotificationsView
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkAllRead={markAllRead}
+          />
+        )}
+        {view === 'settings' && <SettingsView theme={theme} onThemeChange={handleThemeChange} />}
       </section>
     </main>
   )

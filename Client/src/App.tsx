@@ -91,8 +91,7 @@ function App() {
   // simple client-side routing
   if (path === '/register') return <Register />
   if (path === '/forgot-password') return <ForgotPassword />
-  if (path === '/organizer/dashboard') return <OrganizerDashboard />
-
+  if (path === '/organizer/dashboard') return <SchoolDashboard />
 
   return (
     <main className="login-shell">
