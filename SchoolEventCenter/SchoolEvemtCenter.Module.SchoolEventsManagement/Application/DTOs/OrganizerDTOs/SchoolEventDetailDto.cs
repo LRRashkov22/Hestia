@@ -4,6 +4,7 @@ namespace SchoolEvemtCenter.Module.SchoolEventsManagement.Application.DTOs.Organ
 
 public class SchoolEventDetailDto
 {
+    public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;

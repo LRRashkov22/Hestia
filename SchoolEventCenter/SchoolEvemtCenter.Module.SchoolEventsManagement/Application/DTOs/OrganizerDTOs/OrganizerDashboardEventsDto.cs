@@ -4,6 +4,7 @@ namespace SchoolEvemtCenter.Module.SchoolEventsManagement.Application.DTOs.Organ
 
 public class OrganizerDashboardEventsDto
 {
+    public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public EventStatus Status { get; set; }
     public int ConfirmedRegistrations { get; set; }

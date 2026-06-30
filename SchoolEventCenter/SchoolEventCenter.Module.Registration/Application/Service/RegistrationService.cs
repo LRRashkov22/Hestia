@@ -140,6 +140,13 @@ public class RegistrationService : IRegistrationService
             if (registration is null)
                 return Result<RegistrationResponseDto>.Fail("Registration not found");
 
+            // Codex added registration-cancelled DB notification - start
+            var eventTitle = await context.SchoolEvents
+                .Where(x => x.Id == eventId)
+                .Select(x => x.Title)
+                .FirstOrDefaultAsync() ?? "the event";
+            // Codex added registration-cancelled DB notification - end
+
             Registration? promotedRegistration = null;
 
             if (registration.Status == RegistrationStatus.Waitlisted)
@@ -161,6 +168,18 @@ public class RegistrationService : IRegistrationService
                 Console.WriteLine(
                     $"Position={e.Entity.WaitlistPosition}");
             }
+
+            // Codex added registration-cancelled DB notification - start
+            context.Notifications.Add(new Notification
+            {
+                UserId = userId,
+                Type = NotificationType.RegistrationCancelled,
+                Title = "Registration cancelled",
+                Message = $"Your registration for {eventTitle} was cancelled.",
+                CreatedAt = DateTime.UtcNow
+            });
+            // Codex added registration-cancelled DB notification - end
+
             await context.SaveChangesAsync();
 
             await transaction.CommitAsync();

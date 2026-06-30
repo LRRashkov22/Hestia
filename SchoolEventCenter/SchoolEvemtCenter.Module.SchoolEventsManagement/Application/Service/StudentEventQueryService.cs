@@ -33,12 +33,19 @@ public class StudentEventQueryService : IStudentEventQueryService
                 x.UserId == userId &&
                 x.Status == RegistrationStatus.Waitlisted);
 
+        // Codex added real student unread notification count - start
+        var notifications = await context.Notifications
+            .CountAsync(x =>
+                x.UserId == userId &&
+                !x.IsRead);
+        // Codex added real student unread notification count - end
+
         var dashboard = new StudentDashboardCardsDto
         {
             TotalEvents = totalEvents,
             Registered = registered,
             Waitlisted = waitlisted,
-            Notifications = 0
+            Notifications = notifications
         };
 
         return Result<StudentDashboardCardsDto>.Ok(dashboard);

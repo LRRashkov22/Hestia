@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getStudentEventDetails, cancelEvent } from './api/events'
 
 type ViewName = 'dashboard' | 'events' | 'eventDetails' | 'registrations' | 'notifications' | 'settings'
-type CategoryName = 'All' | 'Technology' | 'Career' | 'Workshop' | 'Academic' | 'Social' | 'Business' | 'Wellness'
 
 type NotificationItem = {
   icon: string
@@ -17,7 +16,6 @@ type NotificationItem = {
 
 type EventItem = {
   id: string
-  category: string
   title: string
   description: string
   date: string
@@ -30,12 +28,9 @@ type EventItem = {
   waitlist?: string
 }
 
-const categories: CategoryName[] = ['All', 'Technology', 'Career', 'Workshop', 'Academic', 'Social', 'Business', 'Wellness']
-
 const eventCatalog: EventItem[] = [
   {
     id: '3d09c452-8efa-4cfc-9c1f-b57c8e7f1b8f',
-    category: 'Technology',
     title: 'Annual Hackathon 2025',
     description: 'A 48-hour coding competition where teams of 2-4 students build innovative solutions to real-world problems.',
     date: 'Jul 15, 2025',
@@ -48,7 +43,6 @@ const eventCatalog: EventItem[] = [
   },
   {
     id: 'a4b1d7ad-eca3-4b9e-a6d6-5b2c9c8d7f93',
-    category: 'Career',
     title: 'Career Fair - Summer 2025',
     description: 'Meet recruiters from 50+ top companies spanning technology, finance, healthcare, and consulting.',
     date: 'Jul 22, 2025',
@@ -61,7 +55,6 @@ const eventCatalog: EventItem[] = [
   },
   {
     id: 'b66e3c19-38a8-46ef-af1e-d4f7c3f66726',
-    category: 'Workshop',
     title: 'Design Thinking Workshop',
     description: 'An immersive half-day workshop exploring human-centered design principles and practical product discovery.',
     date: 'Jul 28, 2025',
@@ -75,7 +68,6 @@ const eventCatalog: EventItem[] = [
   },
   {
     id: 'c4e4f137-ff91-4f79-a8a3-1b24b5d7c6a8',
-    category: 'Academic',
     title: 'Research Symposium 2025',
     description: 'Graduate students and faculty present their latest research findings across departments.',
     date: 'Aug 5, 2025',
@@ -88,7 +80,6 @@ const eventCatalog: EventItem[] = [
   },
   {
     id: 'd2b88a4e-cc1d-4d78-9996-c4564f4b8e9b',
-    category: 'Social',
     title: 'International Food Festival',
     description: 'Celebrate cultural diversity with food, music, and performances from student organizations.',
     date: 'Aug 12, 2025',
@@ -101,7 +92,6 @@ const eventCatalog: EventItem[] = [
   },
   {
     id: 'f4d3ab7e-6faf-42b7-8c1c-9c1b0a8c9f91',
-    category: 'Technology',
     title: 'AI & Ethics Panel Discussion',
     description: 'Industry leaders and academics discuss the ethical implications of artificial intelligence in society.',
     date: 'Aug 20, 2025',
@@ -115,7 +105,6 @@ const eventCatalog: EventItem[] = [
 ]
 
 const upcomingEvents = eventCatalog.slice(0, 4).map((event) => ({
-  category: event.category,
   status: event.tags.includes('waitlisted') ? 'Waitlisted' : 'Registered',
   title: event.title,
   date: event.date,
@@ -250,7 +239,6 @@ function DashboardView({ setView }: { setView: (view: ViewName) => void }) {
               <article className="event-card" key={event.title}>
                 <div className="event-main">
                   <div className="tag-row">
-                    <span className="tag category">{event.category}</span>
                     {event.full && <span className="tag full">Full</span>}
                     <span className={`tag ${event.status.toLowerCase()}`}>{event.status}</span>
                   </div>
@@ -425,7 +413,6 @@ function EventDetailsView({
 
 function EventsView() {
   const [events, setEvents] = useState<EventItem[]>(eventCatalog)
-  const [selectedCategory, setSelectedCategory] = useState<CategoryName>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
   const [searchText, setSearchText] = useState<string>('')
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
@@ -436,9 +423,7 @@ function EventsView() {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
   
-  let visibleEvents = selectedCategory === 'All'
-    ? events
-    : events.filter((event) => event.category === selectedCategory)
+  let visibleEvents = events
   
   if (selectedStatus !== 'All') {
     visibleEvents = visibleEvents.filter((event) => {
@@ -564,25 +549,11 @@ function EventsView() {
         </select>
       </div>
 
-      <div className="filter-pills" aria-label="Event categories">
-        {categories.map((item) => (
-          <button
-            type="button"
-            className={item === selectedCategory ? 'active' : ''}
-            key={item}
-            onClick={() => setSelectedCategory(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
       {visibleEvents.length > 0 ? (
         <div className="event-catalog-grid">
           {visibleEvents.map((event) => (
           <article className={`catalog-card ${event.tags.includes('waitlisted') ? 'waitlist-card' : ''}`} key={event.id}>
             <div className="tag-row">
-              <span className="tag neutral">{event.category}</span>
               {event.tags.map((tag) => <span className={`tag ${tag.toLowerCase()}`} key={tag}>{tag}</span>)}
             </div>
             <h2>{event.title}</h2>
@@ -608,8 +579,8 @@ function EventsView() {
         </div>
       ) : (
         <div className="empty-events">
-          <h2>No {selectedCategory.toLowerCase()} events yet</h2>
-          <p>Try another category or switch back to All.</p>
+          <h2>No events found</h2>
+          <p>Try another search or status filter.</p>
         </div>
       )}
     </section>

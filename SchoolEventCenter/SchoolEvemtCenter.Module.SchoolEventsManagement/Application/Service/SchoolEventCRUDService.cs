@@ -130,6 +130,7 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
             .OrderBy(x => x.StartsAt)
             .Select(x => new SchoolEventListDto
             {
+                Id = x.Id,
                 Title = x.Title,
                 Status = x.Status,
                 Capacity = x.Capacity,
@@ -151,10 +152,10 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
     public async Task<Result<SchoolEventDetailDto>> GetSchoolEventOnEditAsync(Guid eventid)
     {
         var _event = await context.SchoolEvents.Where(x =>
-        x.Status == EventStatus.Draft &&
         x.Id == eventid
         ).Select(x => new SchoolEventDetailDto
         {
+            Id = x.Id,
             Title = x.Title,
             Status = x.Status,
             Capacity = x.Capacity,

@@ -60,6 +60,7 @@ public class SchoolEventQueryService : ISchoolEventQueryService
             .OrderBy(x => x.StartsAt)
             .Select(x => new OrganizerDashboardEventsDto
             {
+                Id = x.Id,
                 Title = x.Title,
                 Status = x.Status,
                 ConfirmedRegistrations = x.Registrations
