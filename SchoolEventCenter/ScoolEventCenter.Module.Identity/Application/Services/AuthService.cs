@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using SchoolEventCenter.Module.Data.Domain.Entities;
 using SchoolEventCenter.Module.Data.Domain.Enums;
@@ -21,13 +18,13 @@ public class AuthService : IAuthService
 {
     public readonly SECDbContext context;
     public readonly JwtOptions configuration;
-public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
-{
-    this.context = context;
-    this.configuration = configuration.Value;
-}
+    public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
+    {
+        this.context = context;
+        this.configuration = configuration.Value;
+    }
     //Register-----------------------------------------------------------------------------------------
-    public async Task<(User?, string?)>  RegisterUser(CreateUserDto request)
+    public async Task<(User?, string?)> RegisterUser(CreateUserDto request)
     {
         if (await context.Users.AnyAsync(u => u.Username == request.Username
         || u.Email == request.Email
@@ -46,7 +43,8 @@ public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
     //Register-----------------------------------------------------------------------------------------
 
     //Login--------------------------------------------------------------------------------------------
-    public async Task<(TokenResponseDto?, string?)> LoginAsync(UserDto request) {
+    public async Task<(TokenResponseDto?, string?)> LoginAsync(UserDto request)
+    {
         var user = await context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         if (user is null) return (null, "User not found");
         if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password)
@@ -55,6 +53,33 @@ public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
         return (await CreateTokenResponse(user), null);
     }
     //Login--------------------------------------------------------------------------------------------
+
+    //Change Password----------------------------------------------------------------------------------
+    public async Task<(TokenResponseDto? tokenRespone, string? error)> ChangePassword(ChangePasswordDto request, Guid userid)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userid);
+        if (user is null) return (null, "User not found");
+        if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+            return (null, "Current password is incorrect");
+
+        if (string.IsNullOrEmpty(request.NewPassword) ||
+           request.NewPassword.Length < 8 ||
+           request.NewPassword.Length > 30 ||
+           !request.NewPassword.Any(char.IsUpper) ||
+           !request.NewPassword.Any(char.IsLower) ||
+           !request.NewPassword.Any(char.IsDigit) ||
+           !request.NewPassword.Any(ch => !char.IsLetterOrDigit(ch)))
+            return (null, "Password:" +
+                 "\n must be at least 8 characters long" +
+                 "\n must be maximum 30 characters long" +
+                 "\n must contain at least one uppercase, lowercase letter, digit and special character");
+        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, request.NewPassword);
+        await context.SaveChangesAsync();
+
+        return (await CreateTokenResponse(user), null);
+
+    }
+    //---------------------------------------------------------------------------------------
 
     public async Task Logout(Guid userId)
     {
@@ -81,7 +106,7 @@ public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
     //Create_Access_Token------------------------------------------------------------------------------
     private string CreateToken(User user)
     {
-        var claims = new List<Claim> 
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
@@ -95,7 +120,7 @@ public AuthService(SECDbContext context, IOptions<JwtOptions> configuration)
             issuer: configuration.Issuer,
             audience: configuration.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),  
+            expires: DateTime.UtcNow.AddMinutes(15),
             signingCredentials: creds
 );
         return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);

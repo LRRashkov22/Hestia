@@ -39,7 +39,17 @@ public class IdentityController : ControllerBase
         var result = await AuthService.RegisterUser(request);
         return NoContent();
     }
-    
+
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<ActionResult<TokenResponseDto>> ChangePassword(ChangePasswordDto request)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        var (result, error) = await AuthService.ChangePassword(request, userId);
+        if (error != null) return BadRequest(error);
+        return Ok(result);
+    }
 
 
     [Authorize(Roles = "Organizer, Student")]
