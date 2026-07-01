@@ -183,3 +183,21 @@ export async function register(username: string, email: string, password: string
   }
   return true
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const res = await authFetch(`${BASE}/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: currentPassword, currentPassword, oldPassword: currentPassword, newPassword }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || 'Password update failed')
+  }
+
+  const data: TokenResponse | null = await res.json().catch(() => null)
+  if (data) persistTokens(data)
+
+  return true
+}

@@ -8,10 +8,28 @@ function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json' }
 }
 
+function formatApiError(text: string, fallback: string) {
+  const trimmed = text.trim()
+  if (!trimmed) return fallback
+
+  try {
+    const data = JSON.parse(trimmed) as {
+      errors?: Record<string, string[]>
+      title?: string
+      detail?: string
+    }
+    const errors = data.errors ? Object.values(data.errors).flat().filter(Boolean) : []
+    if (errors.length) return errors.join('\n')
+    return data.detail || data.title || fallback
+  } catch {
+    return trimmed
+  }
+}
+
 async function handleRes(res: Response) {
   if (!res.ok) {
     const text = await res.text()
-    const errorMessage = text?.trim() || `Request failed (${res.status} ${res.statusText})`
+    const errorMessage = formatApiError(text, `Request failed (${res.status} ${res.statusText})`)
     throw new Error(errorMessage)
   }
   if (res.status === 204) return null

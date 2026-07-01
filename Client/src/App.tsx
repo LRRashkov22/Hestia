@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import './App.css'
-import { clearAuth, getCurrentUser, login, register } from './api/auth'
+import { changePassword, clearAuth, getCurrentUser, login, register } from './api/auth'
 import eventsApi from './api/events'
 
 type Toast = { kind: 'success' | 'info' | 'error'; message: string } | null
@@ -117,22 +117,6 @@ function normalizeNotification(item: Record<string, unknown>) {
     createdAt: String(getValue(item, 'createdAt', 'CreatedAt') ?? ''),
     readAt: getValue<string>(item, 'readAt', 'ReadAt') ?? '',
   }
-}
-
-function notificationTypeLabel(value: string) {
-  const labels: Record<string, string> = {
-    '1': 'Registration confirmed',
-    '2': 'Waitlist',
-    '3': 'Waitlist promoted',
-    '4': 'Registration cancelled',
-    '5': 'Event cancelled',
-    RegistrationConfirmed: 'Registration confirmed',
-    RegistrationWaitlisted: 'Waitlist',
-    WaitlistPromoted: 'Waitlist promoted',
-    RegistrationCancelled: 'Registration cancelled',
-    EventCancelled: 'Event cancelled',
-  }
-  return labels[value] ?? value
 }
 
 function Badge({ children, tone = 'gray' }: { children: string; tone?: 'green' | 'amber' | 'red' | 'blue' | 'gray' }) {
@@ -386,10 +370,18 @@ function AppShell({ user, search, setSearch, children }: {
     }
     void loadUnreadCount()
     const refresh = () => void loadUnreadCount()
+    // start realtime subscriptions - ensure SignalR starts and updates unread count (only when authed)
+    let stopRealtime: (() => void) | undefined
+    if (localStorage.getItem('accessToken')) {
+      import('./api/notificationsRealtime')
+        .then((m) => { stopRealtime = m.startNotificationsRealtime(() => window.dispatchEvent(new Event('notifications-changed'))) })
+        .catch(() => {})
+    }
     window.addEventListener('notifications-changed', refresh)
     return () => {
       alive = false
       window.removeEventListener('notifications-changed', refresh)
+      try { stopRealtime && stopRealtime() } catch {}
     }
   }, [])
 
@@ -1366,6 +1358,9 @@ function NotificationsPage() {
 
   useEffect(() => {
     void loadNotifications()
+    const refresh = () => void loadNotifications()
+    window.addEventListener('notifications-changed', refresh)
+    return () => window.removeEventListener('notifications-changed', refresh)
   }, [])
 
   async function markOneRead(notificationId: string) {
@@ -1400,7 +1395,6 @@ function NotificationsPage() {
           onClick={() => void markOneRead(notification.id)}
         >
           <strong>{notification.title}</strong>
-          <span>{notificationTypeLabel(notification.type)}</span>
           <p>{notification.message}</p>
           <em>{formatDate(notification.createdAt)}</em>
         </button>
@@ -1414,7 +1408,35 @@ function NotificationsPage() {
 function SettingsPage({ user, onToast }: { user: ReturnType<typeof getCurrentUser>; onToast: (kind: NonNullable<Toast>['kind'], message: string) => void }) {
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
-  const [theme, setTheme] = useState('Light')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordBusy, setPasswordBusy] = useState(false)
+
+  async function updatePassword(event: FormEvent) {
+    event.preventDefault()
+    setPasswordError('')
+
+    if (!currentPassword || newPassword.length < 8 || newPassword !== confirmPassword) {
+      setPasswordError('Use your current password and make sure the new passwords match with at least 8 characters.')
+      return
+    }
+
+    setPasswordBusy(true)
+    try {
+      await changePassword(currentPassword, newPassword)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      onToast('success', 'Password updated successfully.')
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Password update failed.')
+    } finally {
+      setPasswordBusy(false)
+    }
+  }
+
   return (
     <section className="page narrow">
       <div className="page-head"><div><h1>Settings</h1><p>Manage profile and preferences.</p></div></div>
@@ -1427,21 +1449,25 @@ function SettingsPage({ user, onToast }: { user: ReturnType<typeof getCurrentUse
         <p><Badge tone="blue">{user.role || 'Role'}</Badge></p>
         <button className="primary" onClick={() => onToast('success', 'Profile updated successfully.')}>Save Profile</button>
       </section>
-      <section className="panel form-panel">
-        <h2>Notification Preferences</h2>
-        {['Registration confirmations', 'Waitlist updates', 'Waitlist promotions', 'Event reminders', 'Newsletter'].map((item) => (
-          <label className="toggle-row" key={item}>{item}<input type="checkbox" defaultChecked /></label>
-        ))}
-        <button className="primary" onClick={() => onToast('success', 'Preferences saved.')}>Save Preferences</button>
-      </section>
-      <section className="panel form-panel">
-        <h2>Appearance</h2>
-        <div className="role-grid">
-          {['Light', 'Dark', 'System'].map((item) => (
-            <button type="button" key={item} className={theme === item ? 'selected' : ''} onClick={() => setTheme(item)}>{item}</button>
-          ))}
+      <form className="panel form-panel" onSubmit={updatePassword}>
+        <h2>Change Password</h2>
+        <label className="field">
+          <span>Current Password</span>
+          <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+        </label>
+        <div className="two-col">
+          <label className="field">
+            <span>New Password</span>
+            <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Confirm Password</span>
+            <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+          </label>
         </div>
-      </section>
+        {passwordError && <p className="error-banner">{passwordError}</p>}
+        <button className="primary" disabled={passwordBusy}>{passwordBusy ? 'Updating...' : 'Update Password'}</button>
+      </form>
     </section>
   )
 }

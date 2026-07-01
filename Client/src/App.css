@@ -1111,12 +1111,6 @@ dd {
   background: #eef3ff;
 }
 
-.notification-card span {
-  color: #8a94a8;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
 .notification-card em {
   color: #3158ff;
   font-style: normal;

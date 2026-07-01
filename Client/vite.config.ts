@@ -16,6 +16,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+          '/hubs': {
+            target: env.VITE_API_BASE_URL || 'https://localhost:7147',
+            changeOrigin: true,
+            secure: false,
+            ws: true,
+          },
       },
     },
   }

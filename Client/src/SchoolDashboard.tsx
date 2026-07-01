@@ -648,6 +648,8 @@ function NotificationsView({
   unreadCount: number
   onMarkAllRead: () => void
 }) {
+  // hide numeric prefixes in the displayed type and text (cleanup any injected numbers)
+  const stripLeadingNumbers = (s: string) => s.replace(/^\s*\d+\s*/, '')
   return (
     <section className="page-view notification-page">
       <div className="page-heading split-heading">
@@ -666,12 +668,12 @@ function NotificationsView({
             <span className="large-notice-icon">{item.icon}</span>
             <div>
               <div className="notice-title-row">
-                <h2>{item.title}</h2>
+                <h2>{stripLeadingNumbers(item.title)}</h2>
                 <span>{item.age}</span>
                 {item.unread && <i aria-hidden="true" />}
               </div>
-              <strong>{item.type}</strong>
-              <p>{item.text}</p>
+              <strong>{stripLeadingNumbers(item.type)}</strong>
+              <p>{stripLeadingNumbers(item.text)}</p>
               <a href="/dashboard">{item.event}</a>
             </div>
           </article>
@@ -681,19 +683,12 @@ function NotificationsView({
   )
 }
 
-function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'system'; onThemeChange: (theme: 'light' | 'dark' | 'system') => void }) {
+function SettingsView() {
   const [fullName, setFullName] = useState('Alex Chen')
   const [email, setEmail] = useState('alex@university.edu')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [notifications, setNotifications] = useState({
-    confirmations: true,
-    waitlist: true,
-    promotions: true,
-    reminders: true,
-    newsletter: false,
-  })
 
   return (
     <section className="page-view settings-page">
@@ -705,33 +700,21 @@ function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'sys
       <div className="settings-container">
         <section className="settings-card">
           <div className="settings-header">
-            <span className="settings-icon">👤</span>
             <div>
               <h2>Profile</h2>
-              <p>Update your personal information</p>
+              <p>Update your account information</p>
             </div>
           </div>
           <div className="settings-content">
-            <div className="avatar-section">
-              <div className="avatar-large">AC</div>
-              <div>
-                <h3>Change Avatar</h3>
-                <p>JPG, PNG up to 2MB</p>
-              </div>
-            </div>
             <div className="settings-form-row">
               <div className="form-field">
                 <label>Full Name</label>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <input type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} />
               </div>
               <div className="form-field">
                 <label>Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
               </div>
-            </div>
-            <div className="form-field">
-              <label>Role</label>
-              <input type="text" value="Student" disabled />
             </div>
             <button className="primary-button">Save Profile</button>
           </div>
@@ -739,7 +722,6 @@ function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'sys
 
         <section className="settings-card">
           <div className="settings-header">
-            <span className="settings-icon">🔒</span>
             <div>
               <h2>Change Password</h2>
               <p>Keep your account secure</p>
@@ -748,106 +730,19 @@ function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'sys
           <div className="settings-content">
             <div className="form-field">
               <label>Current Password</label>
-              <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" />
+              <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
             </div>
             <div className="settings-form-row">
               <div className="form-field">
                 <label>New Password</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 8 chars" />
+                <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
               </div>
               <div className="form-field">
                 <label>Confirm Password</label>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" />
+                <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
               </div>
             </div>
             <button className="primary-button">Update Password</button>
-          </div>
-        </section>
-
-        <section className="settings-card">
-          <div className="settings-header">
-            <span className="settings-icon">🔔</span>
-            <div>
-              <h2>Notification Preferences</h2>
-              <p>Choose what you want to be notified about</p>
-            </div>
-          </div>
-          <div className="settings-content notification-preferences">
-            <div className="preference-item">
-              <div>
-                <h3>Registration confirmations</h3>
-                <p>When your registration is confirmed</p>
-              </div>
-              <label className="toggle">
-                <input type="checkbox" checked={notifications.confirmations} onChange={(e) => setNotifications({ ...notifications, confirmations: e.target.checked })} />
-                <span className="toggle-switch" />
-              </label>
-            </div>
-            <div className="preference-item">
-              <div>
-                <h3>Waitlist updates</h3>
-                <p>When you're added to or removed from a waitlist</p>
-              </div>
-              <label className="toggle">
-                <input type="checkbox" checked={notifications.waitlist} onChange={(e) => setNotifications({ ...notifications, waitlist: e.target.checked })} />
-                <span className="toggle-switch" />
-              </label>
-            </div>
-            <div className="preference-item">
-              <div>
-                <h3>Waitlist promotions</h3>
-                <p>When you move up from the waitlist to confirmed</p>
-              </div>
-              <label className="toggle">
-                <input type="checkbox" checked={notifications.promotions} onChange={(e) => setNotifications({ ...notifications, promotions: e.target.checked })} />
-                <span className="toggle-switch" />
-              </label>
-            </div>
-            <div className="preference-item">
-              <div>
-                <h3>Event reminders</h3>
-                <p>24 hours before your registered events</p>
-              </div>
-              <label className="toggle">
-                <input type="checkbox" checked={notifications.reminders} onChange={(e) => setNotifications({ ...notifications, reminders: e.target.checked })} />
-                <span className="toggle-switch" />
-              </label>
-            </div>
-            <div className="preference-item">
-              <div>
-                <h3>Newsletter</h3>
-                <p>Weekly digest of upcoming events</p>
-              </div>
-              <label className="toggle">
-                <input type="checkbox" checked={notifications.newsletter} onChange={(e) => setNotifications({ ...notifications, newsletter: e.target.checked })} />
-                <span className="toggle-switch" />
-              </label>
-            </div>
-            <button className="primary-button">Save Preferences</button>
-          </div>
-        </section>
-
-        <section className="settings-card">
-          <div className="settings-header">
-            <span className="settings-icon">🎨</span>
-            <div>
-              <h2>Appearance</h2>
-              <p>Customize how the platform looks</p>
-            </div>
-          </div>
-          <div className="settings-content theme-options">
-            <button className={`theme-option ${theme === 'light' ? 'active' : ''}`} onClick={() => onThemeChange('light')}>
-              <span>☀️</span>
-              <div>Light</div>
-            </button>
-            <button className={`theme-option ${theme === 'dark' ? 'active' : ''}`} onClick={() => onThemeChange('dark')}>
-              <span>🌙</span>
-              <div>Dark</div>
-            </button>
-            <button className={`theme-option ${theme === 'system' ? 'active' : ''}`} onClick={() => onThemeChange('system')}>
-              <span>💻</span>
-              <div>System</div>
-            </button>
           </div>
         </section>
       </div>
@@ -857,10 +752,6 @@ function SettingsView({ theme, onThemeChange }: { theme: 'light' | 'dark' | 'sys
 
 export default function SchoolDashboard() {
   const [view, setView] = useState<ViewName>('dashboard')
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
-    const saved = localStorage.getItem('theme')
-    return (saved as 'light' | 'dark' | 'system') || 'light'
-  })
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications)
   const [accountOpen, setAccountOpen] = useState(false)
 
@@ -869,13 +760,8 @@ export default function SchoolDashboard() {
     setNotifications((current) => current.map((item) => ({ ...item, unread: false })))
   }
 
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-  }
-
   return (
-    <main className={`school-app theme-${theme}`}>
+    <main className="school-app">
       <header className="school-topbar">
         <div className="topbar-brand">
           <button className="icon-button muted-button" aria-label="Close">x</button>
@@ -948,7 +834,7 @@ export default function SchoolDashboard() {
             onMarkAllRead={markAllRead}
           />
         )}
-        {view === 'settings' && <SettingsView theme={theme} onThemeChange={handleThemeChange} />}
+        {view === 'settings' && <SettingsView />}
       </section>
     </main>
   )
