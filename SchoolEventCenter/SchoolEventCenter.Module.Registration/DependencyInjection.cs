@@ -15,9 +15,9 @@ public static class DependencyInjection
             .Add(new AssemblyPart(typeof(RegistrationController).Assembly));
         services.AddScoped<IRegistrationQueryService, RegistrationQueriesService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
-        // Codex added notification API DI registration - start
+
         services.AddScoped<INotificationQueryService, NotificationQueryService>();
-        // Codex added notification API DI registration - end
+
         // services.AddValidatorsFromAssemblyContaining<SchoolEventDto>();
         return services;
     }

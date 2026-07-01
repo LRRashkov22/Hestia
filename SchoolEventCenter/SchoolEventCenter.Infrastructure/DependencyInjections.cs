@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Resend;
 using SchoolEventCenter.Infrastructure.Email;
 using SchoolEventCenter.Infrastructure.RabbitMQ;
+using SchoolEventCenter.Infrastructure.Services;
 using SchoolEventCenter.Module.Data.Options;
 using SchoolEventCenter.Module.Data.Shared;
 
@@ -23,6 +24,9 @@ public static class DependencyInjection
 
         services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
         services.AddScoped<IEmailSender, ResendEmailSender>();
+        services.AddScoped<NotificationService>();
+        // Default noop publisher - API will override with hub-backed publisher
+        services.AddSingleton<SchoolEventCenter.Infrastructure.Services.INotificationPublisher, SchoolEventCenter.Infrastructure.Services.NoopNotificationPublisher>();
 
         return services;
     }

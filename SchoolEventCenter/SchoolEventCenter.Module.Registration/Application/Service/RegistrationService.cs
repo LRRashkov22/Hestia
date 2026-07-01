@@ -14,6 +14,7 @@ public class RegistrationService : IRegistrationService
 {
     private readonly SECDbContext context;
     private readonly IEventPublisher eventPublisher;
+
     public RegistrationService(SECDbContext context, IEventPublisher eventPublisher)
     {
         this.context = context;
@@ -140,12 +141,7 @@ public class RegistrationService : IRegistrationService
             if (registration is null)
                 return Result<RegistrationResponseDto>.Fail("Registration not found");
 
-            // Codex added registration-cancelled DB notification - start
-            var eventTitle = await context.SchoolEvents
-                .Where(x => x.Id == eventId)
-                .Select(x => x.Title)
-                .FirstOrDefaultAsync() ?? "the event";
-            // Codex added registration-cancelled DB notification - end
+            var cancelledRegistrationId = registration.Id;
 
             Registration? promotedRegistration = null;
 
@@ -169,20 +165,18 @@ public class RegistrationService : IRegistrationService
                     $"Position={e.Entity.WaitlistPosition}");
             }
 
-            // Codex added registration-cancelled DB notification - start
-            context.Notifications.Add(new Notification
-            {
-                UserId = userId,
-                Type = NotificationType.RegistrationCancelled,
-                Title = "Registration cancelled",
-                Message = $"Your registration for {eventTitle} was cancelled.",
-                CreatedAt = DateTime.UtcNow
-            });
-            // Codex added registration-cancelled DB notification - end
-
             await context.SaveChangesAsync();
 
             await transaction.CommitAsync();
+
+            await eventPublisher.PublishAsync(
+                new RegistrationCancelledEvent
+                {
+                    RegistrationId = cancelledRegistrationId,
+                    EventId = eventId,
+                    userId = userId,
+                    OccurredAt = DateTime.UtcNow
+                });
 
             if (promotedRegistration is not null)
             {
