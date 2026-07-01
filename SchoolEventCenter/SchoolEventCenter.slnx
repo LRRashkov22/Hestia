@@ -6,4 +6,5 @@
   <Project Path="SchoolEventCenter.Worker/SchoolEventCenter.Worker.csproj" Id="42b95173-d0ef-4c1f-b976-ab29587a6ab3" />
   <Project Path="SchoolEventCenter/SchoolEventCenter.Api.csproj" />
   <Project Path="ScoolEventCenter.Module.Identity/ScoolEventCenter.Module.Identity.csproj" />
+  <Project Path="Tests/Tests.csproj" Id="1daabf88-3620-4725-8720-0aaddbba638f" />
 </Solution>

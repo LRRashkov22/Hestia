@@ -14,6 +14,7 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
 {
     private readonly SECDbContext context;
     private readonly IEventPublisher eventPublisher;
+
     public SchoolEventCRUDService(SECDbContext context, IEventPublisher eventPublisher)
     {
         this.context = context;
@@ -41,6 +42,7 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
         };
         context.SchoolEvents.Add(School_event);
         await context.SaveChangesAsync();
+
         return Result<Guid>.Ok(School_event.Id);
     }
     //Create_School_Event-------------------------------------------------------------
@@ -59,11 +61,13 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
         schoolEvent.Capacity = request.Capacity;
         schoolEvent.StartsAt = request.StartsAt;
         schoolEvent.EndsAt = request.EndsAt;
+
         schoolEvent.Status = request.Publish ? EventStatus.Published : EventStatus.Draft;
         schoolEvent.Location = request.Location;
         schoolEvent.Url = request.Url;
 
         await context.SaveChangesAsync();
+
         return Result<bool>.Ok(true);
     }
     //Update_School_Event-------------------------------------------------------------
@@ -79,6 +83,7 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
 
         schoolEvent.Status = EventStatus.Published;
         await context.SaveChangesAsync();
+
         return Result<bool>.Ok(true);
     }
     //Publish_School_Event-------------------------------------------------------------
@@ -93,11 +98,11 @@ public class SchoolEventCRUDService : ISchoolEventCRUDService
         schoolEvent.Status = EventStatus.Cancelled;
         await context.SaveChangesAsync();
         await eventPublisher.PublishAsync(
-        new EventCancelledEvent
-        {
-            EventId = eventId,
-            OccurredAt = DateTime.UtcNow,
-        });
+            new EventCancelledEvent
+            {
+                EventId = eventId,
+                OccurredAt = DateTime.UtcNow,
+            });
         return Result<bool>.Ok(true);
     }
     //Cancel_School_Event-------------------------------------------------------------

@@ -1,4 +1,6 @@
-﻿using Scalar.AspNetCore;
+using Scalar.AspNetCore;
+using SchoolEventCenter.Module.Registrations.Presentation;
+
 namespace SchoolEventCenter.Api.Extensions;
 
 public static class MiddlewareExtensions
@@ -18,8 +20,6 @@ public static class MiddlewareExtensions
         app.UseAuthorization();
 
         app.MapControllers();
-
-        //app.MapHub<NotificationHub>("/hubs/notifications");
+        app.MapHub<NotificationHub>("/hubs/notifications");
     }
-
 }

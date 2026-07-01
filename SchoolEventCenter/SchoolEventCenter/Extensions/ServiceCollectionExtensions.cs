@@ -1,23 +1,32 @@
 ﻿using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SchoolEvemtCenter.Module.SchoolEventsManagement;
+using SchoolEventCenter.Api.Services;
 using SchoolEventCenter.Infrastructure;
 using SchoolEventCenter.Module.Data;
 using SchoolEventCenter.Module.Data.Options;
 using SchoolEventCenter.Module.Registrations;
 using ScoolEventCenter.Module.Identity;
 using System.Text;
+using System.Text.Json.Serialization;
 namespace SchoolEventCenter.Api.Extensions;
 
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
         services.AddOpenApi();
         services.AddSignalR();
+        services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 
         services.ConfigureDatabase(configuration);
         services.ConfigureJwtAuthentication(configuration);
@@ -25,8 +34,25 @@ public static class ServiceCollectionExtensions
         services.AddInfrastructure(configuration);
         //Fluet Validation declared inside every Module
         services.AddFluentValidationAutoValidation();
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var errors = context.ModelState.Values
+                    .SelectMany(value => value.Errors)
+                    .Select(error => error.ErrorMessage)
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .Distinct();
+
+                return new BadRequestObjectResult(string.Join(Environment.NewLine, errors));
+            };
+        });
 
         services.ConfigureApplicationModules();
+
+        // Register hub-backed notification publisher
+        services.AddSingleton<SchoolEventCenter.Infrastructure.Services.INotificationPublisher, HubNotificationPublisher>();
+        services.AddHostedService<DatabaseNotificationRealtimeBridge>();
 
         return services;
     }
@@ -92,9 +118,7 @@ public static class ServiceCollectionExtensions
                 {
                     OnMessageReceived = context =>
                     {
-                        var accessToken =
-                            context.Request.Query["access_token"];
-
+                        var accessToken = context.Request.Query["access_token"];
                         var path = context.HttpContext.Request.Path;
 
                         if (!string.IsNullOrEmpty(accessToken) &&
