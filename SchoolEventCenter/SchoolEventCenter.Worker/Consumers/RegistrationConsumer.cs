@@ -53,6 +53,11 @@ public class RegistrationConsumer : BackgroundService
         queue: "registration.queue",
         exchange: options.ExchangeName,
         routingKey: "registration.*");
+        // Event cancellation uses the same worker queue as registration notifications.
+        channel.QueueBind(
+        queue: "registration.queue",
+        exchange: options.ExchangeName,
+        routingKey: "event.*");
         var consumer = new EventingBasicConsumer(channel);
         consumer.Received += HandleMessageAsync;
 
@@ -70,9 +75,9 @@ public class RegistrationConsumer : BackgroundService
 
         var emailService =
             scope.ServiceProvider.GetRequiredService<EmailService>();
-
         var notificationService =
             scope.ServiceProvider.GetRequiredService<NotificationService>();
+
         try
         {
             var body = args.Body.ToArray();
@@ -96,6 +101,11 @@ public class RegistrationConsumer : BackgroundService
                 case "registration.promoted":
                     await HandleWaitlistPromotedAsync(json, emailService, notificationService);
                     break;
+
+                case "registration.cancelled":
+                    await HandleRegistrationCancelledAsync(json, notificationService);
+                    break;
+
                 case "event.cancelled":
                     await HandleEventCancelledAsync(json, emailService, notificationService);
                     break;
@@ -115,8 +125,10 @@ public class RegistrationConsumer : BackgroundService
     }
 
 
-    private async Task HandleRegistrationConfirmedAsync
-        (string json, EmailService emailService, NotificationService notificationService)
+    private async Task HandleRegistrationConfirmedAsync(
+        string json,
+        EmailService emailService,
+        NotificationService notificationService)
     {
         Console.WriteLine("Received:");
         Console.WriteLine(json);
@@ -128,12 +140,14 @@ public class RegistrationConsumer : BackgroundService
         if (domainEvent is null)
             return;
 
-        await emailService.SendRegistrationConfirmedAsync(domainEvent);
-
         await notificationService.CreateRegistrationConfirmedAsync(domainEvent);
+        await SendEmailBestEffortAsync(() => emailService.SendRegistrationConfirmedAsync(domainEvent));
     }
 
-    private async Task HandleRegistrationWaitlistedAsync(string json, EmailService emailService, NotificationService notificationService)
+    private async Task HandleRegistrationWaitlistedAsync(
+        string json,
+        EmailService emailService,
+        NotificationService notificationService)
     {
         var domainEvent =
             JsonSerializer.Deserialize<RegistrationWaitlistedEvent>(json);
@@ -141,12 +155,14 @@ public class RegistrationConsumer : BackgroundService
         if (domainEvent is null)
             return;
 
-        await emailService.SendRegistrationWaitlistedAsync(domainEvent);
-
         await notificationService.CreateRegistrationWaitlistedAsync(domainEvent);
+        await SendEmailBestEffortAsync(() => emailService.SendRegistrationWaitlistedAsync(domainEvent));
     }
 
-    private async Task HandleWaitlistPromotedAsync(string json, EmailService emailService, NotificationService notificationService)
+    private async Task HandleWaitlistPromotedAsync(
+        string json,
+        EmailService emailService,
+        NotificationService notificationService)
     {
         var domainEvent =
             JsonSerializer.Deserialize<WaitlistPromotedEvent>(json);
@@ -154,12 +170,27 @@ public class RegistrationConsumer : BackgroundService
         if (domainEvent is null)
             return;
 
-        await emailService.SendWaitlistPromotedAsync(domainEvent);
-
         await notificationService.CreateWaitlistPromotedAsync(domainEvent);
+        await SendEmailBestEffortAsync(() => emailService.SendWaitlistPromotedAsync(domainEvent));
     }
 
-    private async Task HandleEventCancelledAsync(string json, EmailService emailService, NotificationService notificationService)
+    private static async Task HandleRegistrationCancelledAsync(
+        string json,
+        NotificationService notificationService)
+    {
+        var domainEvent =
+            JsonSerializer.Deserialize<RegistrationCancelledEvent>(json);
+
+        if (domainEvent is null)
+            return;
+
+        await notificationService.CreateRegistrationCancelledAsync(domainEvent);
+    }
+
+    private async Task HandleEventCancelledAsync(
+        string json,
+        EmailService emailService,
+        NotificationService notificationService)
     {
         var domainEvent =
             JsonSerializer.Deserialize<EventCancelledEvent>(json);
@@ -167,9 +198,21 @@ public class RegistrationConsumer : BackgroundService
         if (domainEvent is null)
             return;
 
-        await emailService.SendEventCancelledAsync(domainEvent);
-
         await notificationService.CreateEventCancelledAsync(domainEvent);
+        await SendEmailBestEffortAsync(() => emailService.SendEventCancelledAsync(domainEvent));
+    }
+
+    private static async Task SendEmailBestEffortAsync(Func<Task> sendEmail)
+    {
+        try
+        {
+            await sendEmail();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Email delivery failed, notification was kept.");
+            Console.WriteLine(ex);
+        }
     }
 
     public override void Dispose()

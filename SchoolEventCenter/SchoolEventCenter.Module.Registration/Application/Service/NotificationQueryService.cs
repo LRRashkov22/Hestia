@@ -7,7 +7,6 @@ using SchoolEventCenter.Module.Registrations.Application.Interface;
 
 namespace SchoolEventCenter.Module.Registrations.Application.Service;
 
-// Codex added notification API service implementation - start
 public class NotificationQueryService : INotificationQueryService
 {
     private readonly SECDbContext context;
@@ -80,4 +79,3 @@ public class NotificationQueryService : INotificationQueryService
         return Result<bool>.Ok(true);
     }
 }
-// Codex added notification API service implementation - end

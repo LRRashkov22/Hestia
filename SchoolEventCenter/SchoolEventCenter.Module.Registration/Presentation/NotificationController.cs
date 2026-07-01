@@ -1,20 +1,24 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using SchoolEventCenter.Module.Registrations.Application.Interface;
 
 namespace SchoolEventCenter.Module.Registrations.Presentation;
 
-// Codex added notification API controller - start
 [ApiController]
 [Authorize]
 [Route("api/notifications")]
 public class NotificationController : ControllerBase
 {
     private readonly INotificationQueryService notificationQuery;
+    private readonly IHubContext<NotificationHub> notificationHub;
 
-    public NotificationController(INotificationQueryService notificationQuery)
+    public NotificationController(
+        INotificationQueryService notificationQuery,
+        IHubContext<NotificationHub> notificationHub)
     {
         this.notificationQuery = notificationQuery;
+        this.notificationHub = notificationHub;
     }
 
     [HttpGet]
@@ -50,6 +54,8 @@ public class NotificationController : ControllerBase
 
         if (!result.Success) return NotFound(result.Error);
 
+        await NotifyUnreadCountChanged(userId);
+
         return Ok(result.Value);
     }
 
@@ -62,7 +68,18 @@ public class NotificationController : ControllerBase
 
         if (!result.Success) return BadRequest(result.Error);
 
+        await NotifyUnreadCountChanged(userId);
+
         return Ok(result.Value);
     }
+
+    private async Task NotifyUnreadCountChanged(Guid userId)
+    {
+        var count = await notificationQuery.GetUnreadCountAsync(userId);
+        if (!count.Success) return;
+
+        await notificationHub.Clients
+            .User(userId.ToString())
+            .SendAsync("notificationsChanged", new { unreadCount = count.Value });
+    }
 }
-// Codex added notification API controller - end

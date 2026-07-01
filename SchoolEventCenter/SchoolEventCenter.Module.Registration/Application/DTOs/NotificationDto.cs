@@ -2,7 +2,7 @@ using SchoolEventCenter.Module.Data.Domain.Enums;
 
 namespace SchoolEventCenter.Module.Registrations.Application.DTOs;
 
-// Codex added notification API DTO - start
+
 public class NotificationDto
 {
     public Guid Id { get; set; }
@@ -19,4 +19,4 @@ public class NotificationDto
 
     public DateTime? ReadAt { get; set; }
 }
-// Codex added notification API DTO - end
+
